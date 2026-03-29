@@ -1,8 +1,9 @@
-# ContestTrace 核心爬虫代码
-# 功能：爬取学校官网竞赛通知，自动去重、分类，生成contests.json数据
-import requests
-from bs4 import BeautifulSoup
-import json
-import time
+# ContestTrace 主爬虫程序
+# 开发进度：待完善
+# 功能：自动爬取湖北经济学院团委竞赛通知
 
-# 后续在这里写爬虫逻辑
+def main():
+    print("爬虫功能开发中...")
+
+if __name__ == "__main__":
+    main()
