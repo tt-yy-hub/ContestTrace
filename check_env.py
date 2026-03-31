@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 """
-兼容入口（保留旧文件名，避免新手误点找不到入口）：
-- 推荐运行：run.bat / run.sh / python run_app.py
-- 也可直接运行本文件：python spider.py
+新手零修改环境检查启动器：
+- 自动把 src/ 加入 sys.path
+- 然后运行 contesttrace.env_check
 """
 
 import sys
@@ -17,10 +19,11 @@ def _bootstrap_src_path() -> None:
 
 def main() -> None:
     _bootstrap_src_path()
-    from contesttrace.scraper import main as crawl_main
+    from contesttrace.env_check import main as env_main
 
-    crawl_main()
+    env_main()
 
 
 if __name__ == "__main__":
     main()
+

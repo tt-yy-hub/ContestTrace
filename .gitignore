@@ -218,3 +218,13 @@ data/*.csv
 # 保留 data 文件夹，但忽略里面的所有文件
 data/*
 !data/.gitkeep
+
+# 3. 日志/缓存/静态页面/导出文件（自动生成，绝不上传）
+logs/
+cache/
+static_pages/
+exports/
+
+# 4. 本地运行可能生成的临时文件
+*.tmp
+*.temp

@@ -1,0 +1,112 @@
+app:
+  name: "湖北经济学院团委竞赛信息追踪系统"
+  timezone: "Asia/Shanghai"
+
+# 统一路径配置：全部相对项目根目录，跨平台自动拼接
+paths:
+  data_dir: "data"
+  db_path: "data/contesttrace.sqlite3"
+  logs_dir: "logs"
+  cache_dir: "cache"
+  static_pages_dir: "static_pages"
+  exports_dir: "exports"
+
+site:
+  base_url: "https://tw.hbue.edu.cn"
+  # 正确分页规则： https://tw.hbue.edu.cn/31/list{page}.htm
+  list_url_template: "https://tw.hbue.edu.cn/31/list{page}.htm"
+
+  # DOM解析规则（尽量稳定，结构变化也能降级）
+  list_page:
+    # 列表容器：ul.wp_article_list
+    list_container_css: "ul.wp_article_list"
+    # 单条记录：li.list_item
+    item_css: "li.list_item"
+    # 标题与链接：span.Article_Title > a
+    title_link_css: "span.Article_Title a"
+    # 发布时间：span.Article_PublishDate
+    publish_date_css: "span.Article_PublishDate"
+
+  detail_page:
+    # 标题：h1.arti_title
+    title_css: "h1.arti_title"
+    # 发布人/来源：span.arti_publisher（可选）
+    publisher_css: "span.arti_publisher"
+    # 更新时间：span.arti_update（示例：更新时间：2026-03-30）
+    update_time_css: "span.arti_update"
+    # 正文：div.wp_articlecontent
+    content_css: "div.wp_articlecontent"
+
+crawl:
+  # 爬取页码范围（包含端点）
+  start_page: 1
+  end_page: 18
+
+  # 合规反爬：延时不得低于1秒（单位：秒）
+  delay_seconds_min: 1.2
+  delay_seconds_max: 2.8
+
+  # 网络容错
+  timeout_seconds: 20
+  max_retries: 3
+  retry_backoff_seconds: 1.0
+
+  # 是否把抓取到的原始HTML保存到 static_pages_dir 便于排查（默认开启，新手友好）
+  save_raw_html: true
+  # 仅保存前N个列表页与前N个详情页（防止磁盘爆炸；0表示不限制）
+  save_raw_html_limit_list_pages: 3
+  save_raw_html_limit_detail_pages: 30
+
+filter:
+  # 智能筛选：包含这些关键词更可能是竞赛类通知（可自由增减）
+  positive_keywords:
+    - "竞赛"
+    - "比赛"
+    - "大赛"
+    - "挑战杯"
+    - "创新"
+    - "创业"
+    - "征集"
+    - "作品"
+    - "报名"
+    - "选拔"
+    - "校级"
+    - "省级"
+    - "国赛"
+    - "演讲"
+    - "辩论"
+    - "读书"
+    - "科技"
+    - "科研"
+  # 排除词：出现这些词更可能不是竞赛公告（可自由增减）
+  negative_keywords:
+    - "公示"
+    - "招聘"
+    - "任免"
+    - "会议"
+    - "团日"
+    - "培训"
+    - "评选"
+    - "西部计划"
+    - "社会实践"
+    - "志愿"
+
+anti_crawl:
+  # 默认请求头（可按需加）
+  default_headers:
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+    Accept-Language: "zh-CN,zh;q=0.9"
+    Connection: "keep-alive"
+    Upgrade-Insecure-Requests: "1"
+
+  # 随机UA池（可自由增减）
+  user_agents:
+    - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    - "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15"
+    - "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+    - "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0"
+
+database:
+  table_name: "contest_announcements"
+  # 详情页URL唯一键：严格去重
+  unique_url_column: "detail_url"
