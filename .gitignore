@@ -211,13 +211,14 @@ contest.db
 *.db
 *.sqlite
 
-# 2. data 文件夹（如果放爬取缓存/临时文件）
-data/*.html
-data/*.json
-data/*.csv
-# 保留 data 文件夹，但忽略里面的所有文件
+# 2. data 目录：默认忽略生成文件，但保留训练样本与 CI 快照路径
 data/*
 !data/.gitkeep
+!data/training_data/
+!data/training_data/**
+!data/reports/
+!data/reports/latest_snapshot.csv
+data/attachments/
 
 # 3. 日志/缓存/静态页面/导出文件（自动生成，绝不上传）
 logs/

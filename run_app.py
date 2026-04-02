@@ -21,6 +21,9 @@ def _bootstrap_src_path() -> None:
 
 def main() -> None:
     _bootstrap_src_path()
+    from contesttrace.utils import configure_stdio_utf8
+
+    configure_stdio_utf8()
     from contesttrace.__main__ import main as app_main
 
     app_main()

@@ -8,11 +8,12 @@ from __future__ import annotations
 
 def main() -> None:
     while True:
-        print("\n湖北经济学院团委竞赛信息追踪系统 - 主菜单")
-        print("1) 运行爬虫（自动抓取并入库）")
+        print("\nContestTrace 2.0 - 主菜单")
+        print("1) 运行爬虫（多源抓取并入库）")
         print("2) 数据查询（菜单式）")
         print("3) 一键导出（Excel/CSV）")
         print("4) 环境检查")
+        print("5) Web 前端说明（Streamlit）")
         print("0) 退出")
 
         choice = input("请输入数字选择：").strip()
@@ -64,6 +65,11 @@ def main() -> None:
             from .env_check import main as env_main
 
             env_main()
+            continue
+
+        if choice == "5":
+            print("请在新终端运行：python run_web.py")
+            print("或：python -m streamlit run src/contesttrace/web/app.py")
             continue
 
         print("无效选择，请重新输入。")

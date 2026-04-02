@@ -1,8 +1,8 @@
 app:
-  name: "湖北经济学院团委竞赛信息追踪系统"
+  name: "ContestTrace 竞赛信息智能采集与自动化平台"
   timezone: "Asia/Shanghai"
 
-# 统一路径配置：全部相对项目根目录，跨平台自动拼接
+# 统一路径：相对项目根目录
 paths:
   data_dir: "data"
   db_path: "data/contesttrace.sqlite3"
@@ -10,55 +10,47 @@ paths:
   cache_dir: "cache"
   static_pages_dir: "static_pages"
   exports_dir: "exports"
+  attachments_dir: "data/attachments"
+  models_dir: "data/models"
+  reports_dir: "data/reports"
+  crawl_state_file: "data/crawl_state.json"
+  training_dir: "data/training_data"
 
+# 兼容旧版单站点字段（多源模式下以 config/sites.yaml 为准，此处可作默认回退）
 site:
   base_url: "https://tw.hbue.edu.cn"
-  # 正确分页规则： https://tw.hbue.edu.cn/31/list{page}.htm
   list_url_template: "https://tw.hbue.edu.cn/31/list{page}.htm"
-
-  # DOM解析规则（尽量稳定，结构变化也能降级）
   list_page:
-    # 列表容器：ul.wp_article_list
     list_container_css: "ul.wp_article_list"
-    # 单条记录：li.list_item
     item_css: "li.list_item"
-    # 标题与链接：span.Article_Title > a
     title_link_css: "span.Article_Title a"
-    # 发布时间：span.Article_PublishDate
     publish_date_css: "span.Article_PublishDate"
-
   detail_page:
-    # 标题：h1.arti_title
     title_css: "h1.arti_title"
-    # 发布人/来源：span.arti_publisher（可选）
     publisher_css: "span.arti_publisher"
-    # 更新时间：span.arti_update（示例：更新时间：2026-03-30）
     update_time_css: "span.arti_update"
-    # 正文：div.wp_articlecontent
     content_css: "div.wp_articlecontent"
 
 crawl:
-  # 爬取页码范围（包含端点）
   start_page: 1
   end_page: 18
-
-  # 合规反爬：延时不得低于1秒（单位：秒）
-  delay_seconds_min: 1.2
-  delay_seconds_max: 2.8
-
-  # 网络容错
-  timeout_seconds: 20
+  # 合规：随机延时区间（秒），实际不低于 1.5 由代码兜底
+  delay_seconds_min: 1.5
+  delay_seconds_max: 3.5
+  timeout_seconds: 25
   max_retries: 3
   retry_backoff_seconds: 1.0
-
-  # 是否把抓取到的原始HTML保存到 static_pages_dir 便于排查（默认开启，新手友好）
   save_raw_html: true
-  # 仅保存前N个列表页与前N个详情页（防止磁盘爆炸；0表示不限制）
   save_raw_html_limit_list_pages: 3
   save_raw_html_limit_detail_pages: 30
+  # 是否遵守 robots.txt（建议 true）
+  respect_robots_txt: true
+  # 断点续爬：记录已处理页码到 crawl_state_file
+  incremental: true
+  # 附件：最大单文件 MB（防止异常大文件占满磁盘）
+  attachment_max_mb: 20
 
 filter:
-  # 智能筛选：包含这些关键词更可能是竞赛类通知（可自由增减）
   positive_keywords:
     - "竞赛"
     - "比赛"
@@ -78,7 +70,6 @@ filter:
     - "读书"
     - "科技"
     - "科研"
-  # 排除词：出现这些词更可能不是竞赛公告（可自由增减）
   negative_keywords:
     - "公示"
     - "招聘"
@@ -86,27 +77,31 @@ filter:
     - "会议"
     - "团日"
     - "培训"
-    - "评选"
     - "西部计划"
     - "社会实践"
     - "志愿"
 
 anti_crawl:
-  # 默认请求头（可按需加）
   default_headers:
     Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
     Accept-Language: "zh-CN,zh;q=0.9"
     Connection: "keep-alive"
     Upgrade-Insecure-Requests: "1"
-
-  # 随机UA池（可自由增减）
   user_agents:
     - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-    - "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15"
+    - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+    - "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_2) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15"
+    - "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     - "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+    - "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:123.0) Gecko/20100101 Firefox/123.0"
     - "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0"
+    - "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1"
+    - "Mozilla/5.0 (iPad; CPU OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1"
+    - "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
 
 database:
   table_name: "contest_announcements"
-  # 详情页URL唯一键：严格去重
   unique_url_column: "detail_url"
+
+logging:
+  keep_days: 7

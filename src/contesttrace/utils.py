@@ -5,15 +5,18 @@ import json
 import logging
 import random
 import re
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Tuple
 from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
 from dateutil import parser as date_parser
+
+from .encoding_fixer import smart_decode
 
 
 # =========================
@@ -29,10 +32,31 @@ def ensure_dir(path: Path) -> Path:
 
 
 def safe_write_text(path: Path, text: str) -> None:
-    """统一UTF-8写入文本（避免Windows乱码）。"""
+    """
+    统一 UTF-8（无 BOM）写入文本。
+    说明：源码与配置建议使用 UTF-8；Windows 下控制台另通过 configure_stdio_utf8 处理。
+    """
 
     ensure_dir(path.parent)
-    path.write_text(text, encoding="utf-8", errors="ignore")
+    try:
+        path.write_text(text, encoding="utf-8", errors="replace")
+    except Exception:
+        path.write_text(text, encoding="utf-8", errors="ignore")
+
+
+def configure_stdio_utf8() -> None:
+    """
+    尽量将标准输出/错误设为 UTF-8，减少控制台中文乱码（Python 3.7+）。
+    全平台 try，失败则静默忽略，不影响业务。
+    """
+
+    try:
+        if hasattr(sys.stdout, "reconfigure"):
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        if hasattr(sys.stderr, "reconfigure"):
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 
 # =========================
@@ -43,9 +67,9 @@ def safe_write_text(path: Path, text: str) -> None:
 def setup_logger(logs_dir: Path, name: str = "contesttrace") -> logging.Logger:
     """
     统一日志配置：
-    - 控制台 + 文件
-    - 按日期切分文件名
-    - 新手可直接定位错误
+    - 控制台 + 文件双输出
+    - 按日期切分日志文件
+    - 格式：时间 | 级别 | 模块(logger名) | 消息
     """
 
     ensure_dir(logs_dir)
@@ -57,25 +81,50 @@ def setup_logger(logs_dir: Path, name: str = "contesttrace") -> logging.Logger:
         return logger
 
     fmt = logging.Formatter(
-        fmt="%(asctime)s | %(levelname)s | %(message)s",
+        fmt="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    # 控制台
-    ch = logging.StreamHandler()
+    # 控制台（UTF-8）
+    ch = logging.StreamHandler(stream=sys.stdout)
     ch.setLevel(logging.INFO)
     ch.setFormatter(fmt)
+    try:
+        if hasattr(ch.stream, "reconfigure"):
+            ch.stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
     logger.addHandler(ch)
 
-    # 文件：按日期生成
+    # 文件：按日期生成，UTF-8
     today = dt.datetime.now().strftime("%Y-%m-%d")
     logfile = logs_dir / f"{today}.log"
-    fh = logging.FileHandler(logfile, encoding="utf-8")
+    fh = logging.FileHandler(logfile, encoding="utf-8", errors="replace")
     fh.setLevel(logging.INFO)
     fh.setFormatter(fmt)
     logger.addHandler(fh)
 
     return logger
+
+
+def prune_old_logs(logs_dir: Path, keep_days: int = 7) -> None:
+    """
+    清理过期日志文件，仅删除 logs_dir 下 *.log，保留最近 keep_days 天。
+    单条失败不影响整体。
+    """
+
+    try:
+        ensure_dir(logs_dir)
+        cutoff = dt.datetime.now() - dt.timedelta(days=int(keep_days))
+        for p in logs_dir.glob("*.log"):
+            try:
+                mtime = dt.datetime.fromtimestamp(p.stat().st_mtime)
+                if mtime < cutoff:
+                    p.unlink(missing_ok=True)
+            except Exception:
+                continue
+    except Exception:
+        pass
 
 
 # =========================
@@ -85,6 +134,8 @@ def setup_logger(logs_dir: Path, name: str = "contesttrace") -> logging.Logger:
 
 @dataclass(frozen=True)
 class RequestOptions:
+    """HTTP 请求参数（含可选 Cookie / 代理）。"""
+
     timeout_seconds: int
     max_retries: int
     retry_backoff_seconds: float
@@ -92,53 +143,14 @@ class RequestOptions:
     delay_seconds_max: float
     user_agents: Iterable[str]
     default_headers: Dict[str, str]
-
-
-def _decode_response_best_effort(resp: requests.Response) -> str:
-    """
-    网站页面偶尔会出现“声明UTF-8但实际内容是GB编码”的情况。
-    为了保证中文不乱码，使用多编码尝试，选“替换字符(�)最少”的结果。
-    """
-
-    raw = resp.content or b""
-    candidates = []
-
-    # 先用响应头/requests推断的编码
-    if resp.encoding:
-        candidates.append(resp.encoding)
-
-    # 常见中文网页编码兜底
-    candidates.extend(["utf-8", "gb18030", "gbk"])
-
-    def score_text(text: str) -> int:
-        # � 替换字符越少越好
-        bad = text.count("\ufffd")
-        # 中文字符越多越好（适配中文站点）
-        cjk = len(re.findall(r"[\u4e00-\u9fff]", text))
-        # 常见乱码特征（utf-8 被 latin-1 解码后常出现 å ä è 等）
-        moj = len(re.findall(r"[åäöüèéêÃ¤Ã¥Ã¨Ã©Ã±]", text))
-        # 综合打分：中文权重更高
-        return cjk * 10 - bad * 50 - moj * 5
-
-    best_text = ""
-    best_score = None
-    for enc in candidates:
-        try:
-            text = raw.decode(enc, errors="replace")
-        except Exception:
-            continue
-        sc = score_text(text)
-        if best_score is None or sc > best_score:
-            best_score = sc
-            best_text = text
-
-    return best_text
+    cookies: Optional[Dict[str, str]] = None
+    proxies: Optional[Dict[str, str]] = None
 
 
 def random_delay(min_s: float, max_s: float) -> None:
-    """合规随机延时：避免高频请求造成压力。"""
+    """合规随机延时：最低不低于 1.5 秒。"""
 
-    low = max(1.0, float(min_s))  # 硬性要求：不得低于1秒
+    low = max(1.5, float(min_s))
     high = max(low, float(max_s))
     time.sleep(random.uniform(low, high))
 
@@ -157,25 +169,60 @@ def build_headers(default_headers: Dict[str, str], user_agents: Iterable[str]) -
 
 def http_get_text(url: str, options: RequestOptions, logger: logging.Logger) -> Optional[str]:
     """
-    统一GET请求：
-    - 随机延时（合规）
-    - 随机UA
-    - 超时 + 重试
-    - 全异常捕获（不会直接崩溃）
+    统一 GET 文本响应：
+    - 随机延时（合规，>=1.5s）
+    - 随机 UA + 可选 Cookie/代理
+    - 响应体一律经 encoding_fixer.smart_decode，禁止硬编码单一编码
+    """
+
+    enc_logger = logging.getLogger("contesttrace.encoding")
+
+    for attempt in range(1, options.max_retries + 1):
+        try:
+            random_delay(options.delay_seconds_min, options.delay_seconds_max)
+            headers = build_headers(options.default_headers, options.user_agents)
+            kwargs: Dict[str, Any] = {"headers": headers, "timeout": options.timeout_seconds}
+            if options.proxies:
+                kwargs["proxies"] = options.proxies
+            if options.cookies:
+                kwargs["cookies"] = options.cookies
+            resp = requests.get(url, **kwargs)
+            resp.raise_for_status()
+
+            text, enc = smart_decode(resp.content or b"", logger=enc_logger)
+            logger.debug(f"HTTP 文本解码完成 | url={url} | encoding={enc}")
+            return text
+        except KeyboardInterrupt:
+            raise
+        except Exception as e:
+            logger.warning(f"请求失败（{attempt}/{options.max_retries}）：{url} | {type(e).__name__}: {e}")
+            if attempt < options.max_retries:
+                time.sleep(options.retry_backoff_seconds * attempt)
+            else:
+                return None
+
+
+def http_get_bytes(url: str, options: RequestOptions, logger: logging.Logger) -> Optional[bytes]:
+    """
+    下载二进制内容（附件等）：不做文本解码，直接返回 bytes。
     """
 
     for attempt in range(1, options.max_retries + 1):
         try:
             random_delay(options.delay_seconds_min, options.delay_seconds_max)
             headers = build_headers(options.default_headers, options.user_agents)
-            resp = requests.get(url, headers=headers, timeout=options.timeout_seconds)
+            kwargs: Dict[str, Any] = {"headers": headers, "timeout": options.timeout_seconds}
+            if options.proxies:
+                kwargs["proxies"] = options.proxies
+            if options.cookies:
+                kwargs["cookies"] = options.cookies
+            resp = requests.get(url, **kwargs)
             resp.raise_for_status()
-
-            return _decode_response_best_effort(resp)
+            return resp.content
         except KeyboardInterrupt:
             raise
         except Exception as e:
-            logger.warning(f"请求失败（{attempt}/{options.max_retries}）：{url} | {type(e).__name__}: {e}")
+            logger.warning(f"二进制下载失败（{attempt}/{options.max_retries}）：{url} | {type(e).__name__}: {e}")
             if attempt < options.max_retries:
                 time.sleep(options.retry_backoff_seconds * attempt)
             else:
@@ -333,11 +380,22 @@ def extract_competition_fields(full_text: str) -> Dict[str, Optional[str]]:
 
     fields: Dict[str, Optional[str]] = {}
 
+    fields["event_name"] = regex_extract(
+        t,
+        [
+            r"(?:赛事名称|竞赛名称|比赛名称|活动名称)\s*:\s*([^\n]{2,80})",
+        ],
+    )
     fields["organizer"] = regex_extract(
         t,
         [
             r"(?:主办单位|主办|主办方)\s*:\s*([^\n]{2,60})",
-            r"(?:承办单位|承办)\s*:\s*([^\n]{2,60})",
+        ],
+    )
+    fields["undertaker"] = regex_extract(
+        t,
+        [
+            r"(?:承办单位|承办|承办方)\s*:\s*([^\n]{2,60})",
         ],
     )
     fields["competition_level"] = regex_extract(
@@ -345,6 +403,14 @@ def extract_competition_fields(full_text: str) -> Dict[str, Optional[str]]:
         [
             r"(?:赛事级别|竞赛级别|级别)\s*:\s*([^\n]{2,60})",
             r"(?:校级|省级|国家级|国赛|省赛|校赛)",
+        ],
+    )
+    fields["competition_category"] = regex_extract(
+        t,
+        [
+            r"(?:赛事类别|竞赛类别|类别|学科类别)\s*:\s*([^\n]{2,40})",
+            r"\b([ABC])[类級]类竞赛",
+            r"(A类|B类|C类)",
         ],
     )
     fields["target_audience"] = regex_extract(

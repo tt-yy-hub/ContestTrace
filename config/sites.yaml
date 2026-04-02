@@ -1,0 +1,58 @@
+# 多源定向爬虫站点配置（与 config/config.yaml 合并使用）
+# 将 enabled 设为 true 并补全 DOM 规则后即可启用对应站点
+
+sites:
+  - id: "tw_hbue"
+    enabled: true
+    display_name: "湖北经济学院团委"
+    base_url: "https://tw.hbue.edu.cn"
+    list_url_template: "https://tw.hbue.edu.cn/31/list{page}.htm"
+    start_page: 1
+    end_page: 18
+    list_page:
+      list_container_css: "ul.wp_article_list"
+      item_css: "li.list_item"
+      title_link_css: "span.Article_Title a"
+      publish_date_css: "span.Article_PublishDate"
+    detail_page:
+      title_css: "h1.arti_title"
+      publisher_css: "span.arti_publisher"
+      update_time_css: "span.arti_update"
+      content_css: "div.wp_articlecontent"
+
+  # 以下为扩展示例：需根据目标站实际 HTML 调整选择器后再启用
+  - id: "jwc_hbue"
+    enabled: false
+    display_name: "湖北经济学院教务处（示例）"
+    base_url: "https://www.hbue.edu.cn"
+    list_url_template: "https://www.hbue.edu.cn/jwc/list{page}.htm"
+    start_page: 1
+    end_page: 1
+    list_page:
+      list_container_css: "ul.news_list"
+      item_css: "li"
+      title_link_css: "a"
+      publish_date_css: "span.date"
+    detail_page:
+      title_css: "h1.title"
+      publisher_css: ""
+      update_time_css: "span.time"
+      content_css: "div.content"
+
+  - id: "edu_hubei"
+    enabled: false
+    display_name: "湖北省教育厅（示例）"
+    base_url: "http://jyt.hubei.gov.cn"
+    list_url_template: "http://jyt.hubei.gov.cn/zwgk/tzgg/index_{page}.shtml"
+    start_page: 1
+    end_page: 1
+    list_page:
+      list_container_css: "ul.list"
+      item_css: "li"
+      title_link_css: "a"
+      publish_date_css: "span"
+    detail_page:
+      title_css: "h1"
+      publisher_css: ""
+      update_time_css: ""
+      content_css: "div.article"

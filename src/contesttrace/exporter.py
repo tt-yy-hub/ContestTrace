@@ -31,6 +31,15 @@ FRIENDLY_COLUMNS = {
     "full_text": "通知全文",
     "crawled_at": "爬取时间",
     "status": "处理状态",
+    "source_site_id": "来源站点ID",
+    "event_name": "赛事名称",
+    "undertaker": "承办方",
+    "competition_category": "赛事类别",
+    "attachments_json": "附件信息JSON",
+    "content_hash": "正文哈希",
+    "tags": "关键词标签",
+    "ml_is_competition": "ML是否竞赛",
+    "ml_category_abc": "ML类别ABC",
 }
 
 
