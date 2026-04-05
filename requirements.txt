@@ -1,24 +1,4 @@
-# ContestTrace 2.0 依赖说明（均为常用开源库，无绑卡付费）
-# --- 爬虫与解析 ---
-requests>=2.31.0
-beautifulsoup4>=4.12.3
-lxml>=5.2.0
-# --- 配置 ---
-PyYAML>=6.0.1
-python-dotenv>=1.0.1
-# --- 编码检测（智能解码，禁止硬编码单一 charset）---
-charset-normalizer>=3.3.2
-# --- 时间 ---
-python-dateutil>=2.9.0.post0
-# --- 导出 ---
-openpyxl>=3.1.2
-# --- 数据处理 / 机器学习 ---
-pandas>=2.2.0
-scikit-learn>=1.4.0
-jieba>=0.42.1
-joblib>=1.3.2
-# --- 可选大模型（OpenAI 兼容，Key 从环境变量读取；不配置则自动规则推荐）---
-openai>=1.30.0
-# --- Web 前端 ---
-streamlit>=1.32.0
-plotly>=5.18.0
+requests==2.31.0
+beautifulsoup4==4.12.3
+charset-normalizer==3.3.2
+jieba==0.42.1

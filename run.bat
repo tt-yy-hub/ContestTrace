@@ -1,25 +1,12 @@
 @echo off
 chcp 65001 >nul
-setlocal
-
-cd /d "%~dp0"
-
-echo === ContestTrace 一键运行 ===
-echo 1) 环境检查
-echo 2) 打开主菜单
-echo.
-
-echo [1/2] 正在检查环境...
-python check_env.py
-if errorlevel 1 (
-  echo.
-  echo 环境检查未通过，请先按提示安装依赖后再运行。
-  pause
-  exit /b 1
-)
-
-echo.
-echo [2/2] 启动主菜单...
-python run_app.py
-pause
-
+echo 正在启动ContestTrace...
+echo 1. 安装依赖...
+python -m pip install --no-cache-dir --timeout 60 -r requirements.txt
+echo 2. 运行爬虫...
+python run.py --crawl
+echo 3. 启动前端服务器...
+python -m http.server 8000 --directory contesttrace/frontend
+echo 启动完成！请在浏览器中访问 http://localhost:8000
+echo 按任意键退出...
+pause >nul
