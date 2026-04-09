@@ -8,20 +8,22 @@ const pageSize = 10;
 
 // 页面加载完成后初始化
 window.addEventListener('DOMContentLoaded', async function() {
-    // 加载竞赛数据
-    allContests = await loadContests();
-    
-    // 初始化页面
-    initNavigation();
-    initSearch();
-    initContestList();
-    initRecommendations();
-    initStatistics();
-    initSettings();
-    initModal();
-    
-    // 请求通知权限
-    requestNotificationPermission();
+    try {
+        // 加载竞赛数据
+        allContests = await loadContests();
+        console.log('数据加载成功，共', allContests.length, '条竞赛');
+        
+        // 初始化页面
+        initSearch();
+        initContestList();
+        initStatistics();
+        initModal();
+        
+        // 请求通知权限
+        requestNotificationPermission();
+    } catch (error) {
+        console.error('初始化失败:', error);
+    }
 });
 
 // 初始化导航
@@ -58,26 +60,48 @@ function initNavigation() {
 
 // 初始化搜索
 function initSearch() {
-    const searchBtn = document.getElementById('search-btn');
+    const searchBtn = document.getElementById('search-button');
     const searchInput = document.getElementById('search-input');
-    const filterCategory = document.getElementById('filter-category');
+    const filterCategory = document.getElementById('category-filter');
+    const filterSource = document.getElementById('source-filter');
+    const filterTime = document.getElementById('time-filter');
     
-    searchBtn.addEventListener('click', function() {
-        currentPage = 1;
-        renderContestList();
-    });
-    
-    searchInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
+    if (searchBtn) {
+        searchBtn.addEventListener('click', function() {
             currentPage = 1;
             renderContestList();
-        }
-    });
+        });
+    }
     
-    filterCategory.addEventListener('change', function() {
-        currentPage = 1;
-        renderContestList();
-    });
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                currentPage = 1;
+                renderContestList();
+            }
+        });
+    }
+    
+    if (filterCategory) {
+        filterCategory.addEventListener('change', function() {
+            currentPage = 1;
+            renderContestList();
+        });
+    }
+    
+    if (filterSource) {
+        filterSource.addEventListener('change', function() {
+            currentPage = 1;
+            renderContestList();
+        });
+    }
+    
+    if (filterTime) {
+        filterTime.addEventListener('change', function() {
+            currentPage = 1;
+            renderContestList();
+        });
+    }
 }
 
 // 初始化竞赛列表
@@ -87,15 +111,79 @@ function initContestList() {
 
 // 渲染竞赛列表
 function renderContestList() {
-    const contestList = document.getElementById('contest-list');
+    const contestList = document.getElementById('contest-container');
     const pagination = document.getElementById('pagination');
     
+    if (!contestList) {
+        console.error('contest-container元素不存在');
+        return;
+    }
+    
     // 获取搜索和筛选条件
-    const searchQuery = document.getElementById('search-input').value;
-    const categoryFilter = document.getElementById('filter-category').value;
+    let searchQuery = '';
+    let categoryFilter = 'all';
+    let sourceFilter = 'all';
+    let timeFilter = 'all';
+    
+    const searchInput = document.getElementById('search-input');
+    const categoryFilterEl = document.getElementById('category-filter');
+    const sourceFilterEl = document.getElementById('source-filter');
+    const timeFilterEl = document.getElementById('time-filter');
+    
+    if (searchInput) searchQuery = searchInput.value;
+    if (categoryFilterEl) categoryFilter = categoryFilterEl.value;
+    if (sourceFilterEl) sourceFilter = sourceFilterEl.value;
+    if (timeFilterEl) timeFilter = timeFilterEl.value;
     
     // 筛选竞赛
-    const filteredContests = searchContests(allContests, searchQuery, categoryFilter);
+    let filteredContests = allContests;
+    
+    // 按关键词搜索
+    if (searchQuery) {
+        filteredContests = filteredContests.filter(contest => 
+            contest.title.includes(searchQuery) || 
+            contest.summary.includes(searchQuery) || 
+            (contest.keywords && contest.keywords.some(keyword => keyword.includes(searchQuery)))
+        );
+    }
+    
+    // 按分类筛选
+    if (categoryFilter !== 'all') {
+        filteredContests = filteredContests.filter(contest => 
+            contest.category === categoryFilter
+        );
+    }
+    
+    // 按来源筛选
+    if (sourceFilter !== 'all') {
+        filteredContests = filteredContests.filter(contest => 
+            contest.source === sourceFilter
+        );
+    }
+    
+    // 按时间筛选
+    if (timeFilter !== 'all') {
+        const now = new Date();
+        let cutoffDate;
+        
+        switch (timeFilter) {
+            case 'week':
+                cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                break;
+            case 'month':
+                cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                break;
+            case 'quarter':
+                cutoffDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                break;
+            default:
+                cutoffDate = new Date(0);
+        }
+        
+        filteredContests = filteredContests.filter(contest => 
+            new Date(contest.publish_time) >= cutoffDate
+        );
+    }
     
     // 分页
     const paginatedContests = paginate(filteredContests, currentPage, pageSize);
@@ -113,7 +201,9 @@ function renderContestList() {
     }
     
     // 渲染分页控件
-    renderPagination(pagination, totalPages);
+    if (pagination) {
+        renderPagination(pagination, totalPages);
+    }
 }
 
 // 创建竞赛卡片
@@ -125,20 +215,61 @@ function createContestCard(contest) {
     const daysLeftClass = getDaysLeftClass(daysLeft);
     const daysLeftText = getDaysLeftText(daysLeft);
     
+    // 处理tags，确保它是一个数组
+    const tags = Array.isArray(contest.tags) ? contest.tags : (contest.tags ? contest.tags.split(',') : []);
+    
     card.innerHTML = `
-        <h3>${contest.title}</h3>
+        <h3>${contest.title || '无标题'}</h3>
         <div class="meta">
-            <span>${contest.source}</span> | 
-            <span>${formatDate(contest.publish_time)}</span>
+            <span class="source">${contest.source || '未知来源'}</span> | 
+            <span class="publish-time">${formatDate(contest.publish_time) || '未知时间'}</span>
         </div>
-        <p class="summary">${contest.summary}</p>
-        <div class="tags">
-            ${contest.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
-        </div>
+        <p class="summary">${contest.summary || (contest.content ? contest.content.substring(0, 100) + '...' : '无摘要')}</p>
         <div class="deadline ${daysLeftClass}">
-            ${daysLeftText}
+            <span class="deadline-label">截止时间：</span>
+            <span class="deadline-value">${contest.deadline || '未知'}</span>
+            <span class="deadline-status">(${daysLeftText})</span>
         </div>
+        <div class="expandable-info" style="display: none;">
+            <div class="info-row">
+                <div class="info-item">
+                    <span class="info-label">分类：</span>
+                    <span class="info-value">${contest.category || '其他竞赛'}</span>
+                </div>
+            </div>
+            <div class="info-row">
+                <div class="info-item">
+                    <span class="info-label">参赛对象：</span>
+                    <span class="info-value">${contest.participants || '全体学生'}</span>
+                </div>
+            </div>
+            <div class="info-row">
+                <div class="info-item">
+                    <span class="info-label">奖项设置：</span>
+                    <span class="info-value">${contest.prize || '未知'}</span>
+                </div>
+            </div>
+            <div class="tags">
+                ${tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+            </div>
+        </div>
+        <button class="expand-btn">展开</button>
     `;
+    
+    // 展开/折叠功能
+    const expandBtn = card.querySelector('.expand-btn');
+    const expandableInfo = card.querySelector('.expandable-info');
+    
+    expandBtn.addEventListener('click', function(e) {
+        e.stopPropagation(); // 阻止事件冒泡，避免触发卡片点击事件
+        if (expandableInfo.style.display === 'none') {
+            expandableInfo.style.display = 'block';
+            expandBtn.textContent = '收起';
+        } else {
+            expandableInfo.style.display = 'none';
+            expandBtn.textContent = '展开';
+        }
+    });
     
     // 点击卡片打开模态框
     card.addEventListener('click', function() {
@@ -150,6 +281,11 @@ function createContestCard(contest) {
 
 // 渲染分页控件
 function renderPagination(pagination, totalPages) {
+    if (!pagination) {
+        console.error('pagination元素不存在');
+        return;
+    }
+    
     pagination.innerHTML = '';
     
     if (totalPages <= 1) return;
@@ -222,57 +358,62 @@ function renderStatistics() {
     const stats = loadStatistics(allContests);
     
     // 总竞赛数
-    document.getElementById('total-contests').textContent = stats.total;
+    const totalContestsEl = document.getElementById('total-contests');
+    if (totalContestsEl) {
+        totalContestsEl.textContent = stats.total;
+    }
     
-    // 分类统计图表
-    const categoryCtx = document.getElementById('category-chart').getContext('2d');
-    new Chart(categoryCtx, {
-        type: 'pie',
-        data: {
-            labels: Object.keys(stats.categoryStats),
-            datasets: [{
-                data: Object.values(stats.categoryStats),
-                backgroundColor: [
-                    '#3498db',
-                    '#e74c3c',
-                    '#f39c12',
-                    '#27ae60',
-                    '#9b59b6'
-                ]
-            }]
-        },
-        options: {
-            responsive: true
+    // 本月新增
+    const monthlyContestsEl = document.getElementById('monthly-contests');
+    if (monthlyContestsEl) {
+        const now = new Date();
+        const currentMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+        monthlyContestsEl.textContent = stats.monthStats[currentMonth] || 0;
+    }
+    
+
+    
+    // 绘制图表
+    const contestChartEl = document.getElementById('contest-chart');
+    if (contestChartEl) {
+        const ctx = contestChartEl.getContext('2d');
+        
+        // 准备图表数据
+        const categoryLabels = Object.keys(stats.categoryStats);
+        const categoryData = Object.values(stats.categoryStats);
+        
+        // 销毁之前的图表（如果存在）
+        if (window.contestChart) {
+            window.contestChart.destroy();
         }
-    });
-    
-    // 月份统计图表
-    const monthCtx = document.getElementById('month-chart').getContext('2d');
-    const monthLabels = Object.keys(stats.monthStats).sort();
-    const monthData = monthLabels.map(month => stats.monthStats[month]);
-    
-    new Chart(monthCtx, {
-        type: 'bar',
-        data: {
-            labels: monthLabels,
-            datasets: [{
-                label: '竞赛数量',
-                data: monthData,
-                backgroundColor: '#3498db'
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        precision: 0
+        
+        // 创建新图表
+        window.contestChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: categoryLabels.length > 0 ? categoryLabels : ['其他竞赛'],
+                datasets: [{
+                    data: categoryData.length > 0 ? categoryData : [1],
+                    backgroundColor: [
+                        '#3498db',
+                        '#e74c3c',
+                        '#f39c12',
+                        '#27ae60',
+                        '#9b59b6'
+                    ]
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: '竞赛分类统计'
                     }
                 }
             }
-        }
-    });
+        });
+    }
 }
 
 // 初始化设置
@@ -313,6 +454,11 @@ function initModal() {
     const modal = document.getElementById('contest-modal');
     const closeBtn = document.getElementsByClassName('close')[0];
     
+    if (!modal || !closeBtn) {
+        console.error('modal或closeBtn元素不存在');
+        return;
+    }
+    
     // 关闭模态框
     closeBtn.addEventListener('click', function() {
         modal.style.display = 'none';
@@ -326,56 +472,74 @@ function initModal() {
     });
     
     // 收藏按钮
-    document.getElementById('favorite-btn').addEventListener('click', function() {
-        const contestUrl = this.dataset.url;
-        toggleFavorite(contestUrl);
-        this.textContent = isFavorite(contestUrl) ? '取消收藏' : '收藏';
-    });
+    const favoriteBtn = document.getElementById('favorite-btn');
+    if (favoriteBtn) {
+        favoriteBtn.addEventListener('click', function() {
+            const contestUrl = this.dataset.url;
+            toggleFavorite(contestUrl);
+            this.textContent = isFavorite(contestUrl) ? '取消收藏' : '收藏';
+        });
+    }
     
     // 有用按钮
-    document.getElementById('like-btn').addEventListener('click', function() {
-        alert('感谢您的反馈！');
-    });
+    const likeBtn = document.getElementById('like-btn');
+    if (likeBtn) {
+        likeBtn.addEventListener('click', function() {
+            alert('感谢您的反馈！');
+        });
+    }
     
     // 无用按钮
-    document.getElementById('dislike-btn').addEventListener('click', function() {
-        alert('感谢您的反馈，我们会不断改进！');
-    });
+    const dislikeBtn = document.getElementById('dislike-btn');
+    if (dislikeBtn) {
+        dislikeBtn.addEventListener('click', function() {
+            alert('感谢您的反馈，我们会不断改进！');
+        });
+    }
 }
 
 // 打开竞赛详情模态框
 function openContestModal(contest) {
     const modal = document.getElementById('contest-modal');
     
+    if (!modal) {
+        console.error('contest-modal元素不存在');
+        return;
+    }
+    
     // 填充模态框内容
-    document.getElementById('modal-title').textContent = contest.title;
-    document.getElementById('modal-source').textContent = contest.source;
-    document.getElementById('modal-publish-time').textContent = formatDate(contest.publish_time);
-    document.getElementById('modal-deadline').textContent = formatDate(contest.deadline);
-    document.getElementById('modal-category').textContent = contest.category;
-    document.getElementById('modal-organizer').textContent = contest.organizer || '未知';
-    document.getElementById('modal-participants').textContent = contest.participants || '未知';
-    document.getElementById('modal-prize').textContent = contest.prize || '未知';
-    document.getElementById('modal-contact').textContent = contest.contact || '未知';
-    document.getElementById('modal-summary').textContent = contest.summary;
-    document.getElementById('modal-link').href = contest.url;
+    const modalTitleEl = document.getElementById('modal-title');
+    if (modalTitleEl) modalTitleEl.textContent = contest.title;
     
-    // 剩余天数
-    const daysLeft = calculateDaysLeft(contest.deadline);
-    const daysLeftClass = getDaysLeftClass(daysLeft);
-    const daysLeftText = getDaysLeftText(daysLeft);
-    const daysLeftElement = document.getElementById('modal-days-left');
-    daysLeftElement.textContent = daysLeftText;
-    daysLeftElement.className = `days-left ${daysLeftClass}`;
+    const modalSourceEl = document.getElementById('modal-source');
+    if (modalSourceEl) modalSourceEl.textContent = contest.source;
     
-    // 标签
-    const tagsElement = document.getElementById('modal-tags');
-    tagsElement.innerHTML = contest.tags.map(tag => `<span class="tag">${tag}</span>`).join('');
+    const modalPublishTimeEl = document.getElementById('modal-publish-time');
+    if (modalPublishTimeEl) modalPublishTimeEl.textContent = formatDate(contest.publish_time);
     
-    // 设置收藏按钮状态
-    const favoriteBtn = document.getElementById('favorite-btn');
-    favoriteBtn.dataset.url = contest.url;
-    favoriteBtn.textContent = isFavorite(contest.url) ? '取消收藏' : '收藏';
+    const modalDeadlineEl = document.getElementById('modal-deadline');
+    if (modalDeadlineEl) modalDeadlineEl.textContent = formatDate(contest.deadline) || '未知';
+    
+    const modalCategoryEl = document.getElementById('modal-category');
+    if (modalCategoryEl) modalCategoryEl.textContent = contest.category || '未知';
+    
+    const modalOrganizerEl = document.getElementById('modal-organizer');
+    if (modalOrganizerEl) modalOrganizerEl.textContent = contest.organizer || '未知';
+    
+    const modalParticipantsEl = document.getElementById('modal-participants');
+    if (modalParticipantsEl) modalParticipantsEl.textContent = contest.participants || '未知';
+    
+    const modalPrizeEl = document.getElementById('modal-prize');
+    if (modalPrizeEl) modalPrizeEl.textContent = contest.prize || '未知';
+    
+    const modalContactEl = document.getElementById('modal-contact');
+    if (modalContactEl) modalContactEl.textContent = contest.contact || '未知';
+    
+    const modalContentEl = document.getElementById('modal-content');
+    if (modalContentEl) modalContentEl.textContent = contest.content || '无详细内容';
+    
+    const modalUrlEl = document.getElementById('modal-url');
+    if (modalUrlEl) modalUrlEl.href = contest.url;
     
     // 显示模态框
     modal.style.display = 'block';

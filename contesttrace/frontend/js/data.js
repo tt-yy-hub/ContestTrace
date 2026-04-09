@@ -63,16 +63,55 @@ const mockContests = [
 // 加载竞赛数据
 async function loadContests() {
     try {
+        console.log('开始加载数据...');
+        
         // 尝试从data/contests.json加载数据
-        const response = await fetch('data/contests.json');
-        if (response.ok) {
-            const data = await response.json();
-            return data;
-        } else {
-            // 如果没有数据文件，使用模拟数据
-            console.log('使用模拟数据');
-            return mockContests;
+        try {
+            const response = await fetch('data/contests.json');
+            if (response.ok) {
+                const data = await response.json();
+                console.log('从data/contests.json加载数据成功，共', data.length, '条竞赛');
+                
+                // 处理数据格式，确保字段名与前端代码匹配
+                const processedData = data.map(item => ({
+                    id: item.id || item.raw_notice_id || Math.floor(Math.random() * 10000),
+                    title: item.title || '无标题',
+                    url: item.url || item.notice_url || '',
+                    source: item.source || item.source_department || '未知来源',
+                    publish_time: item.publish_time || '2025-01-01',
+                    deadline: item.deadline || item.sign_up_deadline || '',
+                    category: item.category || '其他竞赛',
+                    organizer: item.organizer || item.source_department || '未知',
+                    participants: item.participants || '全体学生',
+                    prize: item.prize || '未知',
+                    requirement: item.requirement || '',
+                    contact: item.contact || '',
+                    content: item.content || '无详细内容',
+                    summary: item.summary || (item.content ? item.content.substring(0, 100) + '...' : '无摘要'),
+                    keywords: item.keywords || (item.tags ? item.tags.split(',') : []),
+                    tags: item.tags || (item.keywords ? item.keywords.join(',') : ''),
+                    spider_name: item.spider_name || item.source_department || '未知'
+                }));
+                
+                // 保存到localStorage，以便下次使用
+                try {
+                    saveToLocalStorage('contest_data', processedData);
+                    console.log('数据已保存到localStorage');
+                } catch (localStorageError) {
+                    console.log('无法保存到localStorage:', localStorageError);
+                }
+                
+                return processedData;
+            } else {
+                console.log('从data/contests.json加载数据失败，状态:', response.status);
+            }
+        } catch (fetchError) {
+            console.log('网络加载失败，使用模拟数据:', fetchError);
         }
+        
+        // 使用模拟数据
+        console.log('使用模拟数据，共', mockContests.length, '条竞赛');
+        return mockContests;
     } catch (e) {
         console.error('加载数据失败:', e);
         return mockContests;

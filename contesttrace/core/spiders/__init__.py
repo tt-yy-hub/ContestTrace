@@ -5,9 +5,9 @@
 """
 
 from .base_spider import BaseSpider
-from .hbufe_spider import HBUFESpider
+from .hbufe_spider import HbufeSpider
 
 __all__ = [
     'BaseSpider',
-    'HBUFESpider'
+    'HbufeSpider'
 ]

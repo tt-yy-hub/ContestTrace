@@ -3,103 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ContestTrace - 竞赛信息智能采集与自动化平台</title>
+    <title>学科竞赛信息聚合平台</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
-    <!-- 导航栏 -->
-    <nav class="navbar">
+    <header class="header">
         <div class="container">
-            <h1 class="logo">ContestTrace</h1>
-            <div class="nav-links">
-                <a href="#" class="nav-link active" data-section="list">竞赛列表</a>
-                <a href="#" class="nav-link" data-section="recommend">个性化推荐</a>
-                <a href="#" class="nav-link" data-section="stats">数据统计</a>
-                <a href="#" class="nav-link" data-section="settings">设置</a>
+            <div class="logo">
+                <h1>学科竞赛信息聚合平台</h1>
             </div>
+            <nav class="nav">
+                <ul>
+                    <li><a href="#" class="active"><i class="fas fa-home"></i> 首页</a></li>
+                    <li><a href="#statistics"><i class="fas fa-chart-bar"></i> 数据统计</a></li>
+                    <li><a href="#about"><i class="fas fa-info-circle"></i> 关于我们</a></li>
+                </ul>
+            </nav>
         </div>
-    </nav>
+    </header>
 
-    <!-- 搜索栏 -->
-    <div class="search-container">
-        <div class="container">
-            <input type="text" id="search-input" placeholder="搜索竞赛...">
-            <button id="search-btn">搜索</button>
-            <select id="filter-category">
-                <option value="">全部分类</option>
-                <option value="学科竞赛">学科竞赛</option>
-                <option value="技能竞赛">技能竞赛</option>
-                <option value="创业竞赛">创业竞赛</option>
-                <option value="文体竞赛">文体竞赛</option>
-                <option value="其他竞赛">其他竞赛</option>
-            </select>
-        </div>
-    </div>
-
-    <!-- 主要内容 -->
-    <div class="main-content">
-        <div class="container">
-            <!-- 竞赛列表 section -->
-            <section id="list-section" class="section active">
-                <h2>竞赛列表</h2>
-                <div class="contest-list" id="contest-list">
-                    <!-- 竞赛卡片将通过JS动态生成 -->
+    <main class="main">
+        <section class="hero">
+            <div class="container">
+                <h2>智能聚合，精准推送</h2>
+                <p>实时聚合各学院竞赛信息，智能筛选匹配，为你推荐最适合的学科竞赛</p>
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="搜索竞赛...">
+                    <button id="search-button"><i class="fas fa-search"></i></button>
                 </div>
+            </div>
+        </section>
+
+        <section class="contest-list">
+            <div class="container">
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <label for="category-filter">分类：</label>
+                        <select id="category-filter">
+                            <option value="all">全部分类</option>
+                            <option value="学术">学术竞赛</option>
+                            <option value="创新">创新竞赛</option>
+                            <option value="创业">创业竞赛</option>
+                            <option value="技能">技能竞赛</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="source-filter">来源：</label>
+                        <select id="source-filter">
+                            <option value="all">全部来源</option>
+                            <option value="校团委">校团委</option>
+                            <option value="信息管理学院">信息管理学院</option>
+                            <option value="创新创业学院">创新创业学院</option>
+                            <option value="统计与数学学院">统计与数学学院</option>
+                            <option value="工商管理学院">工商管理学院</option>
+                            <option value="教务处">教务处</option>
+                            <option value="艺术学院">艺术学院</option>
+                            <option value="经济与贸易学院">经济与贸易学院</option>
+                            <option value="金融学院">金融学院</option>
+                            <option value="会计学院">会计学院</option>
+                            <option value="旅游与酒店管理学院">旅游与酒店管理学院</option>
+                            <option value="外国语学院">外国语学院</option>
+                            <option value="信息工程学院">信息工程学院</option>
+                            <option value="学生工作处">学生工作处</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="time-filter">时间：</label>
+                        <select id="time-filter">
+                            <option value="all">全部时间</option>
+                            <option value="week">近一周</option>
+                            <option value="month">近一个月</option>
+                            <option value="quarter">近三个月</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="contests" id="contest-container">
+                    <!-- 竞赛卡片将通过 JavaScript 动态添加 -->
+                </div>
+
                 <div class="pagination" id="pagination">
-                    <!-- 分页控件将通过JS动态生成 -->
+                    <!-- 分页控件将通过 JavaScript 动态添加 -->
                 </div>
-            </section>
+            </div>
+        </section>
 
-            <!-- 个性化推荐 section -->
-            <section id="recommend-section" class="section">
-                <h2>个性化推荐</h2>
-                <div class="contest-list" id="recommend-list">
-                    <!-- 推荐竞赛将通过JS动态生成 -->
-                </div>
-            </section>
-
-            <!-- 数据统计 section -->
-            <section id="stats-section" class="section">
+        <section id="statistics" class="statistics">
+            <div class="container">
                 <h2>数据统计</h2>
-                <div class="stats-container">
-                    <div class="stats-card">
+                <div class="stats-grid">
+                    <div class="stat-card">
                         <h3>总竞赛数</h3>
                         <p id="total-contests">0</p>
                     </div>
-                    <div class="stats-card">
-                        <h3>按分类统计</h3>
-                        <canvas id="category-chart"></canvas>
-                    </div>
-                    <div class="stats-card">
-                        <h3>按月份统计</h3>
-                        <canvas id="month-chart"></canvas>
+                    <div class="stat-card">
+                        <h3>本月新增</h3>
+                        <p id="monthly-contests">0</p>
                     </div>
                 </div>
-            </section>
+                <div class="chart-container">
+                    <canvas id="contest-chart"></canvas>
+                </div>
+            </div>
+        </section>
 
-            <!-- 设置 section -->
-            <section id="settings-section" class="section">
-                <h2>设置</h2>
-                <div class="settings-container">
-                    <div class="setting-item">
-                        <label for="notification-toggle">启用浏览器通知</label>
-                        <input type="checkbox" id="notification-toggle">
-                    </div>
-                    <div class="setting-item">
-                        <label for="keywords-input">订阅关键词（用逗号分隔）</label>
-                        <input type="text" id="keywords-input" placeholder="例如：数学,计算机,创业">
-                    </div>
-                    <div class="setting-item">
-                        <button id="save-settings">保存设置</button>
-                    </div>
-                    <div class="setting-item">
-                        <button id="export-csv">导出CSV</button>
-                    </div>
+        <section id="about" class="about">
+            <div class="container">
+                <h2>关于我们</h2>
+                <p>学科竞赛信息聚合平台致力于为大学生提供全面、及时、准确的学科竞赛信息，帮助学生发现适合自己的竞赛机会，提升个人能力和竞争力。</p>
+                <p>我们通过爬虫技术实时聚合各学院的竞赛信息，经过智能筛选和分类，为用户提供个性化的竞赛推荐。</p>
+                <div class="team">
+                    <h3>开发团队</h3>
+                    <p>我们是一支专注于数据挖掘和信息聚合的技术团队，致力于为学生提供更好的竞赛信息服务。</p>
                 </div>
-            </section>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 学科竞赛信息聚合平台. 保留所有权利.</p>
         </div>
-    </div>
+    </footer>
 
     <!-- 竞赛详情模态框 -->
     <div class="modal" id="contest-modal">
@@ -118,7 +144,6 @@
                 <div class="info-item">
                     <span class="label">截止时间：</span>
                     <span id="modal-deadline"></span>
-                    <span id="modal-days-left" class="days-left"></span>
                 </div>
                 <div class="info-item">
                     <span class="label">分类：</span>
@@ -141,22 +166,23 @@
                     <span id="modal-contact"></span>
                 </div>
                 <div class="info-item">
-                    <span class="label">摘要：</span>
-                    <p id="modal-summary"></p>
+                    <span class="label">详细内容：</span>
+                    <p id="modal-content"></p>
                 </div>
-                <div class="tags" id="modal-tags">
-                    <!-- 标签将通过JS动态生成 -->
+                <div class="info-item">
+                    <span class="label">原文链接：</span>
+                    <a id="modal-url" href="#" target="_blank">查看原文</a>
                 </div>
-                <a href="" target="_blank" class="detail-link" id="modal-link">查看详情</a>
-            </div>
-            <div class="modal-actions">
-                <button class="favorite-btn" id="favorite-btn">收藏</button>
-                <button class="feedback-btn" id="like-btn">👍 有用</button>
-                <button class="feedback-btn" id="dislike-btn">👎 无用</button>
+                <div class="modal-actions">
+                    <button id="favorite-btn" data-url="">收藏</button>
+                    <button id="like-btn">有用</button>
+                    <button id="dislike-btn">无用</button>
+                </div>
             </div>
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/data.js"></script>
     <script src="js/main.js"></script>

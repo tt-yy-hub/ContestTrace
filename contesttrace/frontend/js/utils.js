@@ -4,7 +4,7 @@
 
 // 格式化日期
 function formatDate(dateString) {
-    if (!dateString) return '未知';
+    if (!dateString) return '未知时间';
     return dateString;
 }
 

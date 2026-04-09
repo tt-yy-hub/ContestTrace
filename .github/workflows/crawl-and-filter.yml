@@ -1,0 +1,46 @@
+name: Daily Crawl and Filter
+
+on:
+  schedule:
+    # 每天运行一次，时间设置为 UTC 时间，对应北京时间 8:00
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+    # 允许手动触发
+
+jobs:
+  crawl-and-filter:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run crawl and filter
+        run: python run.py --crawl
+
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if git diff --name-only | grep -E "data/|contesttrace/frontend/data/"; then
+            echo "changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push changes
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          git add data/ contesttrace/frontend/data/
+          git commit -m "Update data: Daily crawl and filter"
+          git push
