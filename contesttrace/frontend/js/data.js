@@ -93,14 +93,6 @@ async function loadContests() {
                     spider_name: item.spider_name || item.source_department || '未知'
                 }));
                 
-                // 保存到localStorage，以便下次使用
-                try {
-                    saveToLocalStorage('contest_data', processedData);
-                    console.log('数据已保存到localStorage');
-                } catch (localStorageError) {
-                    console.log('无法保存到localStorage:', localStorageError);
-                }
-                
                 return processedData;
             } else {
                 console.log('从data/contests.json加载数据失败，状态:', response.status);

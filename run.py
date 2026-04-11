@@ -56,8 +56,12 @@ def perform_filter(db_manager):
         logger.info("没有待筛选的公告")
         return
     
-    # 初始化过滤器
-    competition_filter = CompetitionFilter()
+    # 初始化竞赛指南解析器并加载指南数据
+    from contesttrace.core.utils.contest_guide_parser import contest_guide_parser
+    guide_competitions = contest_guide_parser.load_guide_competitions()
+    
+    # 初始化过滤器，传入指南数据
+    competition_filter = CompetitionFilter(guide_competitions=guide_competitions)
     
     # 筛选公告
     filtered_notices = competition_filter.filter_notices(pending_notices)
@@ -110,8 +114,12 @@ def perform_filter_all():
     # 主数据库管理器
     main_db_manager = DatabaseManager()
     
-    # 初始化过滤器
-    competition_filter = CompetitionFilter()
+    # 初始化竞赛指南解析器并加载指南数据
+    from contesttrace.core.utils.contest_guide_parser import contest_guide_parser
+    guide_competitions = contest_guide_parser.load_guide_competitions()
+    
+    # 初始化过滤器，传入指南数据
+    competition_filter = CompetitionFilter(guide_competitions=guide_competitions)
     
     # 处理其他爬虫的数据库
     data_dir = "data"

@@ -39,16 +39,6 @@
             <div class="container">
                 <div class="filter-bar">
                     <div class="filter-group">
-                        <label for="category-filter">分类：</label>
-                        <select id="category-filter">
-                            <option value="all">全部分类</option>
-                            <option value="学术">学术竞赛</option>
-                            <option value="创新">创新竞赛</option>
-                            <option value="创业">创业竞赛</option>
-                            <option value="技能">技能竞赛</option>
-                        </select>
-                    </div>
-                    <div class="filter-group">
                         <label for="source-filter">来源：</label>
                         <select id="source-filter">
                             <option value="all">全部来源</option>
@@ -75,6 +65,28 @@
                             <option value="week">近一周</option>
                             <option value="month">近一个月</option>
                             <option value="quarter">近三个月</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="month-filter">月份：</label>
+                        <select id="month-filter">
+                            <option value="all">全部月份</option>
+                            <option value="2024-01">2024年1月</option>
+                            <option value="2024-02">2024年2月</option>
+                            <option value="2024-03">2024年3月</option>
+                            <option value="2024-04">2024年4月</option>
+                            <option value="2024-05">2024年5月</option>
+                            <option value="2024-06">2024年6月</option>
+                            <option value="2024-07">2024年7月</option>
+                            <option value="2024-08">2024年8月</option>
+                            <option value="2024-09">2024年9月</option>
+                            <option value="2024-10">2024年10月</option>
+                            <option value="2024-11">2024年11月</option>
+                            <option value="2024-12">2024年12月</option>
+                            <option value="2025-01">2025年1月</option>
+                            <option value="2025-02">2025年2月</option>
+                            <option value="2025-03">2025年3月</option>
+                            <option value="2025-04">2025年4月</option>
                         </select>
                     </div>
                 </div>
@@ -145,10 +157,7 @@
                     <span class="label">截止时间：</span>
                     <span id="modal-deadline"></span>
                 </div>
-                <div class="info-item">
-                    <span class="label">分类：</span>
-                    <span id="modal-category"></span>
-                </div>
+
                 <div class="info-item">
                     <span class="label">组织者：</span>
                     <span id="modal-organizer"></span>

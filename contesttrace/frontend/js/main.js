@@ -62,9 +62,9 @@ function initNavigation() {
 function initSearch() {
     const searchBtn = document.getElementById('search-button');
     const searchInput = document.getElementById('search-input');
-    const filterCategory = document.getElementById('category-filter');
     const filterSource = document.getElementById('source-filter');
     const filterTime = document.getElementById('time-filter');
+    const filterMonth = document.getElementById('month-filter');
     
     if (searchBtn) {
         searchBtn.addEventListener('click', function() {
@@ -82,13 +82,6 @@ function initSearch() {
         });
     }
     
-    if (filterCategory) {
-        filterCategory.addEventListener('change', function() {
-            currentPage = 1;
-            renderContestList();
-        });
-    }
-    
     if (filterSource) {
         filterSource.addEventListener('change', function() {
             currentPage = 1;
@@ -98,6 +91,13 @@ function initSearch() {
     
     if (filterTime) {
         filterTime.addEventListener('change', function() {
+            currentPage = 1;
+            renderContestList();
+        });
+    }
+    
+    if (filterMonth) {
+        filterMonth.addEventListener('change', function() {
             currentPage = 1;
             renderContestList();
         });
@@ -121,19 +121,19 @@ function renderContestList() {
     
     // 获取搜索和筛选条件
     let searchQuery = '';
-    let categoryFilter = 'all';
     let sourceFilter = 'all';
     let timeFilter = 'all';
+    let monthFilter = 'all';
     
     const searchInput = document.getElementById('search-input');
-    const categoryFilterEl = document.getElementById('category-filter');
     const sourceFilterEl = document.getElementById('source-filter');
     const timeFilterEl = document.getElementById('time-filter');
+    const monthFilterEl = document.getElementById('month-filter');
     
     if (searchInput) searchQuery = searchInput.value;
-    if (categoryFilterEl) categoryFilter = categoryFilterEl.value;
     if (sourceFilterEl) sourceFilter = sourceFilterEl.value;
     if (timeFilterEl) timeFilter = timeFilterEl.value;
+    if (monthFilterEl) monthFilter = monthFilterEl.value;
     
     // 筛选竞赛
     let filteredContests = allContests;
@@ -144,13 +144,6 @@ function renderContestList() {
             contest.title.includes(searchQuery) || 
             contest.summary.includes(searchQuery) || 
             (contest.keywords && contest.keywords.some(keyword => keyword.includes(searchQuery)))
-        );
-    }
-    
-    // 按分类筛选
-    if (categoryFilter !== 'all') {
-        filteredContests = filteredContests.filter(contest => 
-            contest.category === categoryFilter
         );
     }
     
@@ -183,6 +176,15 @@ function renderContestList() {
         filteredContests = filteredContests.filter(contest => 
             new Date(contest.publish_time) >= cutoffDate
         );
+    }
+    
+    // 按月份筛选
+    if (monthFilter !== 'all') {
+        filteredContests = filteredContests.filter(contest => {
+            const publishDate = new Date(contest.publish_time);
+            const publishMonth = publishDate.getFullYear() + '-' + String(publishDate.getMonth() + 1).padStart(2, '0');
+            return publishMonth === monthFilter;
+        });
     }
     
     // 分页
@@ -222,7 +224,8 @@ function createContestCard(contest) {
         <h3>${contest.title || '无标题'}</h3>
         <div class="meta">
             <span class="source">${contest.source || '未知来源'}</span> | 
-            <span class="publish-time">${formatDate(contest.publish_time) || '未知时间'}</span>
+            <span class="publish-time">${formatDate(contest.publish_time) || '未知时间'}</span> | 
+            <span class="competition-level">${contest.competition_level || '未知等级'}</span>
         </div>
         <p class="summary">${contest.summary || (contest.content ? contest.content.substring(0, 100) + '...' : '无摘要')}</p>
         <div class="deadline ${daysLeftClass}">
@@ -233,8 +236,8 @@ function createContestCard(contest) {
         <div class="expandable-info" style="display: none;">
             <div class="info-row">
                 <div class="info-item">
-                    <span class="info-label">分类：</span>
-                    <span class="info-value">${contest.category || '其他竞赛'}</span>
+                    <span class="info-label">竞赛等级：</span>
+                    <span class="info-value">${contest.competition_level || '未知等级'}</span>
                 </div>
             </div>
             <div class="info-row">
@@ -371,16 +374,14 @@ function renderStatistics() {
         monthlyContestsEl.textContent = stats.monthStats[currentMonth] || 0;
     }
     
-
-    
-    // 绘制图表
+    // 绘制图表（修改为按月份统计）
     const contestChartEl = document.getElementById('contest-chart');
     if (contestChartEl) {
         const ctx = contestChartEl.getContext('2d');
         
-        // 准备图表数据
-        const categoryLabels = Object.keys(stats.categoryStats);
-        const categoryData = Object.values(stats.categoryStats);
+        // 准备图表数据（按月份）
+        const monthLabels = Object.keys(stats.monthStats).sort();
+        const monthData = monthLabels.map(month => stats.monthStats[month]);
         
         // 销毁之前的图表（如果存在）
         if (window.contestChart) {
@@ -389,18 +390,15 @@ function renderStatistics() {
         
         // 创建新图表
         window.contestChart = new Chart(ctx, {
-            type: 'pie',
+            type: 'bar',
             data: {
-                labels: categoryLabels.length > 0 ? categoryLabels : ['其他竞赛'],
+                labels: monthLabels.length > 0 ? monthLabels : ['无数据'],
                 datasets: [{
-                    data: categoryData.length > 0 ? categoryData : [1],
-                    backgroundColor: [
-                        '#3498db',
-                        '#e74c3c',
-                        '#f39c12',
-                        '#27ae60',
-                        '#9b59b6'
-                    ]
+                    label: '竞赛数量',
+                    data: monthData.length > 0 ? monthData : [0],
+                    backgroundColor: '#667eea',
+                    borderColor: '#764ba2',
+                    borderWidth: 1
                 }]
             },
             options: {
@@ -408,7 +406,15 @@ function renderStatistics() {
                 plugins: {
                     title: {
                         display: true,
-                        text: '竞赛分类统计'
+                        text: '竞赛月份统计'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
                     }
                 }
             }
@@ -520,9 +526,6 @@ function openContestModal(contest) {
     const modalDeadlineEl = document.getElementById('modal-deadline');
     if (modalDeadlineEl) modalDeadlineEl.textContent = formatDate(contest.deadline) || '未知';
     
-    const modalCategoryEl = document.getElementById('modal-category');
-    if (modalCategoryEl) modalCategoryEl.textContent = contest.category || '未知';
-    
     const modalOrganizerEl = document.getElementById('modal-organizer');
     if (modalOrganizerEl) modalOrganizerEl.textContent = contest.organizer || '未知';
     
@@ -540,6 +543,23 @@ function openContestModal(contest) {
     
     const modalUrlEl = document.getElementById('modal-url');
     if (modalUrlEl) modalUrlEl.href = contest.url;
+    
+    // 添加竞赛等级信息
+    const modalLevelEl = document.createElement('div');
+    modalLevelEl.className = 'info-item';
+    modalLevelEl.innerHTML = `
+        <span class="label">竞赛等级：</span>
+        <span>${contest.competition_level || '未知等级'}</span>
+    `;
+    
+    const modalBody = document.querySelector('.modal-body');
+    if (modalBody) {
+        // 找到发布时间元素，在其后插入竞赛等级元素
+        const publishTimeItem = modalBody.querySelector('.info-item:nth-child(3)');
+        if (publishTimeItem) {
+            publishTimeItem.insertAdjacentElement('afterend', modalLevelEl);
+        }
+    }
     
     // 显示模态框
     modal.style.display = 'block';
