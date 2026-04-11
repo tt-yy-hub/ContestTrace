@@ -19,20 +19,27 @@ class DatabaseManager:
     数据库管理器
     """
     
-    def __init__(self, data_dir: str = "data"):
+    def __init__(self, data_dir: str = "data", spider_name: str = None):
         """
         初始化数据库管理器
         
         Args:
             data_dir: 数据目录
+            spider_name: 爬虫名称，用于创建独立的数据库
         """
         # 确保数据目录存在
         self.data_dir = data_dir
         os.makedirs(self.data_dir, exist_ok=True)
         
         # 数据库文件路径
-        self.raw_db_path = os.path.join(self.data_dir, "contest_trace_raw.db")
-        self.comp_db_path = os.path.join(self.data_dir, "contest_trace_competition.db")
+        if spider_name:
+            # 为每个爬虫创建独立的数据库
+            self.raw_db_path = os.path.join(self.data_dir, f"contest_trace_raw_{spider_name}.db")
+            self.comp_db_path = os.path.join(self.data_dir, f"contest_trace_competition_{spider_name}.db")
+        else:
+            # 默认数据库
+            self.raw_db_path = os.path.join(self.data_dir, "contest_trace_raw.db")
+            self.comp_db_path = os.path.join(self.data_dir, "contest_trace_competition.db")
         
         # 初始化数据库
         self._init_databases()
@@ -61,12 +68,16 @@ class DatabaseManager:
                 notice_url TEXT UNIQUE NOT NULL,
                 title TEXT NOT NULL,
                 publish_time TEXT NOT NULL,
-                source_department TEXT NOT NULL,
+                publisher TEXT NOT NULL,
                 content TEXT,
-                raw_html TEXT,
                 crawl_time TEXT NOT NULL,
                 filter_status TEXT DEFAULT 'pending',
                 filter_time TEXT,
+                review_status TEXT DEFAULT 'unreviewed',
+                review_time TEXT,
+                review_result TEXT,
+                review_notes TEXT,
+                filter_confidence REAL,
                 UNIQUE(notice_url)
             )
             ''')
@@ -90,18 +101,24 @@ class DatabaseManager:
             cursor.execute('''
             CREATE TABLE IF NOT EXISTS competition_notices (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                raw_notice_id INTEGER UNIQUE NOT NULL,
-                notice_url TEXT UNIQUE NOT NULL,
-                title TEXT NOT NULL,
-                publish_time TEXT NOT NULL,
-                source_department TEXT NOT NULL,
-                content TEXT NOT NULL,
-                summary TEXT,
-                tags TEXT,
-                sign_up_deadline TEXT,
-                filter_pass_time TEXT NOT NULL,
-                UNIQUE(raw_notice_id),
-                UNIQUE(notice_url)
+                raw_notice_id INTEGER,                -- 对应 notices.id
+                notice_url TEXT,                      -- 对应 notices.url
+                title TEXT,                           -- 对应 notices.title
+                publish_time DATE,                    -- 对应 notices.publish_time
+                publisher TEXT,                       -- 对应 notices.source（发布部门）
+                content TEXT,                         -- 对应 notices.content
+                source TEXT,                          -- 爬虫来源，可从 spider_name 或文件名获取
+                filter_pass_time DATETIME,            -- 筛选通过时间
+                competition_name TEXT,                -- 识别出的竞赛名称
+                competition_level TEXT,               -- 识别出的级别 (A+/A/B/C)
+                -- 以下字段为可选的扩展信息，如果原始数据中有则映射，没有则留空
+                deadline TEXT,                        -- 对应 notices.deadline
+                organizer TEXT,                       -- 对应 notices.organizer
+                participants TEXT,                    -- 对应 notices.participants
+                prize TEXT,                           -- 对应 notices.prize
+                requirement TEXT,                     -- 对应 notices.requirement
+                contact TEXT,                         -- 对应 notices.contact
+                confidence REAL DEFAULT 0.0           -- 筛选置信度
             )
             ''')
             
@@ -145,17 +162,16 @@ class DatabaseManager:
             # 准备插入数据
             notice_url = notice.get('url', '')
             title = notice.get('title', '无标题')
-            source_department = notice.get('source', '未知来源')
+            publisher = notice.get('source', '未知来源')
             content = notice.get('content', '无内容')
-            raw_html = notice.get('raw_html', '')
             crawl_time = notice.get('crawl_time', datetime.now().isoformat())
             
             # 执行插入
             cursor.execute('''
             INSERT OR IGNORE INTO raw_notices 
-            (notice_url, title, publish_time, source_department, content, raw_html, crawl_time)
+            (notice_url, title, publish_time, publisher, content, crawl_time, filter_confidence)
             VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (notice_url, title, publish_time, source_department, content, raw_html, crawl_time))
+            ''', (notice_url, title, publish_time, publisher, content, crawl_time, notice.get('filter_confidence', 0.0)))
             
             inserted = cursor.rowcount > 0
             conn.commit()
@@ -254,11 +270,9 @@ class DatabaseManager:
             notice_url = notice.get('notice_url', '')
             title = notice.get('title', '')
             publish_time = notice.get('publish_time', '')
-            source_department = notice.get('source_department', '')
+            publisher = notice.get('publisher', '') or notice.get('source_department', '')
             content = notice.get('content', '')
-            summary = notice.get('summary', '')
-            tags = notice.get('tags', '')
-            sign_up_deadline = notice.get('sign_up_deadline', '')
+            source = notice.get('source', '')
             filter_pass_time = notice.get('filter_pass_time', datetime.now().isoformat())
             
             # 处理竞赛公告，提取详细字段
@@ -270,31 +284,35 @@ class DatabaseManager:
             }
             processed_contest = data_processor.process_contest(contest)
             
+            # 获取竞赛名称和级别，如果notice中已有则使用，否则使用处理后的
+            competition_name = notice.get('competition_name') or processed_contest.get('competition_name')
+            competition_level = notice.get('competition_level') or processed_contest.get('competition_level')
+            
             # 执行插入
             cursor.execute('''
-            INSERT OR IGNORE INTO competition_notices 
-            (raw_notice_id, notice_url, title, publish_time, source_department, 
-             content, summary, tags, sign_up_deadline, filter_pass_time, 
-             deadline, organizer, participants, prize, requirement, contact, category)
+            INSERT INTO competition_notices 
+            (raw_notice_id, notice_url, title, publish_time, publisher, 
+             content, source, filter_pass_time, competition_name, competition_level, 
+             deadline, organizer, participants, prize, requirement, contact, confidence)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (raw_notice_id, notice_url, title, publish_time, source_department, 
-                 content, summary, tags, sign_up_deadline, filter_pass_time, 
+            ''', (raw_notice_id, notice_url, title, publish_time, publisher, 
+                 content, source, filter_pass_time, competition_name, competition_level, 
                  processed_contest.get('deadline', ''),
                  processed_contest.get('organizer', ''),
                  processed_contest.get('participants', ''),
                  processed_contest.get('prize', ''),
                  processed_contest.get('requirement', ''),
                  processed_contest.get('contact', ''),
-                 processed_contest.get('category', '其他竞赛')))
+                 notice.get('confidence', 0.0)))
             
             inserted = cursor.rowcount > 0
             conn.commit()
             conn.close()
             
             if inserted:
-                logger.info(f"竞赛公告插入成功: {title}")
+                logger.info(f"竞赛公告插入/更新成功: {title}")
             else:
-                logger.info(f"竞赛公告已存在，跳过: {title}")
+                logger.info(f"竞赛公告操作失败: {title}")
             
             return inserted
         except Exception as e:
@@ -303,7 +321,7 @@ class DatabaseManager:
     
     def get_competition_notices(self) -> List[Dict[str, Any]]:
         """
-        获取所有竞赛公告
+        获取竞赛公告
         
         Returns:
             竞赛公告列表
@@ -328,11 +346,27 @@ class DatabaseManager:
                 notice = dict(row)
                 notices.append(notice)
             
-            logger.info(f"获取到 {len(notices)} 条竞赛公告")
             return notices
         except Exception as e:
             logger.error(f"获取竞赛公告失败: {e}")
             return []
+    
+    def clear_competition_notices(self):
+        """
+        清空竞赛公告表
+        """
+        try:
+            conn = sqlite3.connect(self.comp_db_path)
+            cursor = conn.cursor()
+            
+            # 清空竞赛公告表
+            cursor.execute('DELETE FROM competition_notices')
+            conn.commit()
+            conn.close()
+            
+            logger.info("竞赛公告表已清空")
+        except Exception as e:
+            logger.error(f"清空竞赛公告表失败: {e}")
     
     def reset_filter_status(self):
         """
@@ -402,3 +436,127 @@ class DatabaseManager:
                 'time_valid': 0,
                 'duplicate': 0
             }
+    
+    def is_notice_exist(self, notice_url: str) -> bool:
+        """
+        检查公告是否已存在
+        
+        Args:
+            notice_url: 公告URL
+        
+        Returns:
+            是否存在
+        """
+        try:
+            conn = sqlite3.connect(self.raw_db_path)
+            cursor = conn.cursor()
+            
+            # 检查公告是否存在
+            cursor.execute('''
+            SELECT COUNT(*) FROM raw_notices 
+            WHERE notice_url = ?
+            ''', (notice_url,))
+            
+            count = cursor.fetchone()[0]
+            conn.close()
+            
+            return count > 0
+        except Exception as e:
+            logger.error(f"检查公告是否存在失败: {e}")
+            return False
+    
+    def update_review_status(self, notice_id: int, status: str, result: str = None, notes: str = None):
+        """
+        更新审核状态
+        
+        Args:
+            notice_id: 公告ID
+            status: 审核状态 (unreviewed, reviewing, reviewed)
+            result: 审核结果 (approve, reject)
+            notes: 审核备注
+        """
+        try:
+            conn = sqlite3.connect(self.raw_db_path)
+            cursor = conn.cursor()
+            
+            review_time = datetime.now().isoformat()
+            
+            cursor.execute('''
+            UPDATE raw_notices 
+            SET review_status = ?, review_time = ?, review_result = ?, review_notes = ? 
+            WHERE id = ?
+            ''', (status, review_time, result, notes, notice_id))
+            
+            conn.commit()
+            conn.close()
+            logger.info(f"更新公告审核状态成功: {notice_id}, 状态: {status}")
+        except Exception as e:
+            logger.error(f"更新审核状态失败: {e}")
+    
+    def get_pending_review_notices(self) -> List[Dict[str, Any]]:
+        """
+        获取待审核的公告
+        
+        Returns:
+            待审核的公告列表
+        """
+        try:
+            conn = sqlite3.connect(self.raw_db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            # 查询待审核的公告
+            cursor.execute('''
+            SELECT * FROM raw_notices 
+            WHERE review_status = 'unreviewed' 
+            OR review_status = 'reviewing'
+            ''')
+            
+            rows = cursor.fetchall()
+            conn.close()
+            
+            # 转换为字典列表
+            notices = []
+            for row in rows:
+                notice = dict(row)
+                notices.append(notice)
+            
+            logger.info(f"获取到 {len(notices)} 条待审核公告")
+            return notices
+        except Exception as e:
+            logger.error(f"获取待审核公告失败: {e}")
+            return []
+    
+    def get_review_history(self) -> List[Dict[str, Any]]:
+        """
+        获取审核历史
+        
+        Returns:
+            审核历史列表
+        """
+        try:
+            conn = sqlite3.connect(self.raw_db_path)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            
+            # 查询已审核的公告
+            cursor.execute('''
+            SELECT * FROM raw_notices 
+            WHERE review_status = 'reviewed' 
+            ORDER BY review_time DESC
+            ''')
+            
+            rows = cursor.fetchall()
+            conn.close()
+            
+            # 转换为字典列表
+            notices = []
+            for row in rows:
+                notice = dict(row)
+                notices.append(notice)
+            
+            logger.info(f"获取到 {len(notices)} 条审核历史")
+            return notices
+        except Exception as e:
+            logger.error(f"获取审核历史失败: {e}")
+            return []

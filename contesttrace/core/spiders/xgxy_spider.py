@@ -27,66 +27,7 @@ class XgxySpider(BaseSpider):
             base_url="https://xgxy.hbue.edu.cn/3988/list.htm"
         )
     
-    def parse_list(self, content: str) -> list:
-        """
-        解析列表页面
-        
-        Args:
-            content: 页面内容
-        
-        Returns:
-            详情页URL列表
-        """
-        detail_urls = []
-        
-        try:
-            soup = BeautifulSoup(content, 'html.parser')
-            
-            # 查找新闻列表 - 适配信息管理学院的页面结构
-            list_container = soup.find('ul', class_='wp_article_list')
-            if list_container:
-                items = list_container.find_all('li')
-                
-                for item in items:
-                    a_tag = item.find('a')
-                    if a_tag and 'href' in a_tag.attrs:
-                        href = a_tag['href']
-                        # 构建完整URL
-                        if href.startswith('http'):
-                            detail_url = href
-                        else:
-                            if href.startswith('/'):
-                                detail_url = f"https://xgxy.hbue.edu.cn{href}"
-                            else:
-                                detail_url = f"https://xgxy.hbue.edu.cn/{href}"
-                        # 过滤掉非竞赛链接
-                        if 'htm' in detail_url and 'list' not in detail_url:
-                            detail_urls.append(detail_url)
-            else:
-                # 备用方案：查找所有a标签
-                items = soup.find_all('a')
-                
-                for a_tag in items:
-                    if 'href' in a_tag.attrs:
-                        href = a_tag['href']
-                        # 构建完整URL
-                        if href.startswith('http'):
-                            detail_url = href
-                        else:
-                            if href.startswith('/'):
-                                detail_url = f"https://xgxy.hbue.edu.cn{href}"
-                            else:
-                                detail_url = f"https://xgxy.hbue.edu.cn/{href}"
-                        # 过滤掉非竞赛链接
-                        if 'htm' in detail_url and 'list' not in detail_url:
-                            detail_urls.append(detail_url)
-            
-            # 去重
-            detail_urls = list(set(detail_urls))
-        except Exception as e:
-            logger.error(f"解析列表页面失败: {e}")
-        
-        return detail_urls
+    # 使用基类的parse_list方法
     
     def parse_detail(self, content: str, url: str) -> dict:
         """

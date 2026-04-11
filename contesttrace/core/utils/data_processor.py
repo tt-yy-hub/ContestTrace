@@ -8,6 +8,7 @@
 from datetime import datetime
 import logging
 from .common import normalize_date
+from .contest_guide_parser import get_competition_level, get_competition_name
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,18 @@ class DataProcessor:
             # 字段标准化
             contest = self._normalize_fields(contest)
             
+            # 提取竞赛名称
+            contest['competition_name'] = get_competition_name(contest.get('title', ''))
+            
+            # 提取竞赛级别
+            contest['competition_level'] = get_competition_level(contest.get('title', ''))
+            
+            # 确保空值处理正确
+            if contest['competition_name'] is None:
+                contest['competition_name'] = ''
+            if contest['competition_level'] is None:
+                contest['competition_level'] = ''
+            
             # 计算截止时间剩余天数
             contest['days_left'] = self._calculate_days_left(contest.get('deadline', ''))
             
@@ -67,7 +80,11 @@ class DataProcessor:
         """
         # 填充基本字段
         contest['title'] = contest.get('title', '').strip()
-        contest['url'] = contest.get('url', '').strip()
+        # 支持 notice_url 和 url 两种字段名
+        contest['url'] = contest.get('notice_url', contest.get('url', '')).strip()
+        # 确保 notice_url 字段也存在
+        if 'notice_url' not in contest:
+            contest['notice_url'] = contest['url']
         contest['source'] = contest.get('source', '').strip()
         contest['content'] = contest.get('content', '').strip()
         contest['summary'] = contest.get('summary', '').strip()

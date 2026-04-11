@@ -27,49 +27,7 @@ class HbufeSpider(BaseSpider):
             base_url="https://tw.hbue.edu.cn/31/list.htm"
         )
     
-    def parse_list(self, content: str) -> list:
-        """
-        解析列表页面
-        
-        Args:
-            content: 页面内容
-        
-        Returns:
-            详情页URL列表
-        """
-        detail_urls = []
-        
-        try:
-            soup = BeautifulSoup(content, 'html.parser')
-            
-            # 查找新闻列表 - 根据实际页面结构
-            news_list = soup.find('ul', class_='wp_article_list')
-            if not news_list:
-                return detail_urls
-            
-            # 查找所有新闻链接
-            items = news_list.find_all('li', class_='list_item')
-            
-            for item in items:
-                title_span = item.find('span', class_='Article_Title')
-                if title_span:
-                    a_tag = title_span.find('a')
-                    if a_tag and 'href' in a_tag.attrs:
-                        href = a_tag['href']
-                        # 构建完整URL
-                        if href.startswith('http'):
-                            detail_url = href
-                        else:
-                            # 处理相对路径
-                            if href.startswith('/'):
-                                detail_url = f"https://tw.hbue.edu.cn{href}"
-                            else:
-                                detail_url = f"https://tw.hbue.edu.cn/{href}"
-                        detail_urls.append(detail_url)
-        except Exception as e:
-            logger.error(f"解析列表页面失败: {e}")
-        
-        return detail_urls
+    # 使用基类的parse_list方法
     
     def parse_detail(self, content: str, url: str) -> dict:
         """

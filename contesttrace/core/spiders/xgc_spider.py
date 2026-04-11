@@ -27,66 +27,7 @@ class XgcSpider(BaseSpider):
             base_url="https://xgc.hbue.edu.cn/1007/list1.htm"
         )
     
-    def parse_list(self, content: str) -> list:
-        """
-        解析列表页面
-        
-        Args:
-            content: 页面内容
-        
-        Returns:
-            详情页URL列表
-        """
-        detail_urls = []
-        
-        try:
-            soup = BeautifulSoup(content, 'html.parser')
-            
-            # 查找新闻列表 - 适配学生工作处的页面结构
-            list_container = soup.find('ul', class_='wp_article_list')
-            if list_container:
-                items = list_container.find_all('li')
-                
-                for item in items:
-                    a_tag = item.find('a')
-                    if a_tag and 'href' in a_tag.attrs:
-                        href = a_tag['href']
-                        # 构建完整URL
-                        if href.startswith('http'):
-                            detail_url = href
-                        else:
-                            if href.startswith('/'):
-                                detail_url = f"https://xgc.hbue.edu.cn{href}"
-                            else:
-                                detail_url = f"https://xgc.hbue.edu.cn/{href}"
-                        # 过滤掉非竞赛链接
-                        if 'htm' in detail_url and 'list' not in detail_url:
-                            detail_urls.append(detail_url)
-            else:
-                # 备用方案：查找所有a标签
-                items = soup.find_all('a')
-                
-                for a_tag in items:
-                    if 'href' in a_tag.attrs:
-                        href = a_tag['href']
-                        # 构建完整URL
-                        if href.startswith('http'):
-                            detail_url = href
-                        else:
-                            if href.startswith('/'):
-                                detail_url = f"https://xgc.hbue.edu.cn{href}"
-                            else:
-                                detail_url = f"https://xgc.hbue.edu.cn/{href}"
-                        # 过滤掉非竞赛链接
-                        if 'htm' in detail_url and 'list' not in detail_url:
-                            detail_urls.append(detail_url)
-            
-            # 去重
-            detail_urls = list(set(detail_urls))
-        except Exception as e:
-            logger.error(f"解析列表页面失败: {e}")
-        
-        return detail_urls
+    # 使用基类的parse_list方法
     
     def parse_detail(self, content: str, url: str) -> dict:
         """
@@ -178,26 +119,33 @@ class XgcSpider(BaseSpider):
                 logger.info(f"生成下一页URL: {next_url}")
                 return next_url
             else:
-                # 如果无法从URL提取页码，尝试查找分页导航
-                soup = BeautifulSoup(content, 'html.parser')
-                
-                # 查找分页导航
-                pagination = soup.find('div', class_='wp_paging')
-                if not pagination:
-                    return ""
-                
-                # 查找下一页链接
-                next_page = pagination.find('a', class_='next')
-                if next_page and 'href' in next_page.attrs:
-                    href = next_page['href']
-                    # 构建完整URL
-                    if href.startswith('http'):
-                        return href
-                    else:
-                        if href.startswith('/'):
-                            return f"https://xgc.hbue.edu.cn{href}"
+                # 处理 list.htm 格式的URL（第一页）
+                if 'list.htm' in current_url:
+                    # 视为第一页，生成第二页URL
+                    next_url = current_url.replace('list.htm', 'list2.htm')
+                    logger.info(f"生成下一页URL: {next_url}")
+                    return next_url
+                else:
+                    # 如果无法从URL提取页码，尝试查找分页导航
+                    soup = BeautifulSoup(content, 'html.parser')
+                    
+                    # 查找分页导航
+                    pagination = soup.find('div', class_='wp_paging')
+                    if not pagination:
+                        return ""
+                    
+                    # 查找下一页链接
+                    next_page = pagination.find('a', class_='next')
+                    if next_page and 'href' in next_page.attrs:
+                        href = next_page['href']
+                        # 构建完整URL
+                        if href.startswith('http'):
+                            return href
                         else:
-                            return f"https://xgc.hbue.edu.cn/{href}"
+                            if href.startswith('/'):
+                                return f"https://xgc.hbue.edu.cn{href}"
+                            else:
+                                return f"https://xgc.hbue.edu.cn/{href}"
         except Exception as e:
             logger.error(f"获取下一页失败: {e}")
         

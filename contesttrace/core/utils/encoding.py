@@ -29,10 +29,9 @@ def smart_decode(content: bytes) -> str:
         result = from_bytes(content).best()
         if result:
             decoded = result.decode()
-            logger.debug(f"自动检测编码成功: {result.encoding}")
             return decoded
-    except Exception as e:
-        logger.debug(f"自动检测编码失败: {e}")
+    except Exception:
+        pass
     
     # 备选解码顺序
     encodings = ['utf-8-sig', 'gb18030', 'gbk', 'big5', 'utf-8']
@@ -40,10 +39,9 @@ def smart_decode(content: bytes) -> str:
     for encoding in encodings:
         try:
             decoded = content.decode(encoding)
-            logger.debug(f"使用{encoding}解码成功")
             return decoded
-        except Exception as e:
-            logger.debug(f"使用{encoding}解码失败: {e}")
+        except Exception:
+            pass
     
     # 兜底方案：使用utf-8并替换错误字符
     try:

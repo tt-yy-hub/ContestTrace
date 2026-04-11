@@ -13,7 +13,6 @@ from datetime import datetime
 sys.path.append(str(Path(__file__).parent))
 
 from contesttrace.core.utils import setup_logger, ensure_directory
-from contesttrace.core.spiders.spider_manager import SpiderManager
 from contesttrace.core.storage.db_manager import DatabaseManager
 from contesttrace.core.filter.competition_filter import CompetitionFilter
 from contesttrace.core.exporter import ContestExporter
@@ -23,38 +22,7 @@ import logging
 logger = setup_logger()
 
 
-import threading
-import time
 
-def crawl_with_timeout(spider):
-    """
-    带超时的爬虫执行
-    """
-    result = []
-    
-    def target():
-        nonlocal result
-        try:
-            logger.info(f"[{spider.name}] 开始执行爬虫线程")
-            result = spider.crawl()
-            logger.info(f"[{spider.name}] 爬虫线程执行完成, 共获取 {len(result)} 条数据")
-        except Exception as e:
-            logger.error(f"[{spider.name}] 爬虫执行失败: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
-    
-    thread = threading.Thread(target=target)
-    thread.daemon = True
-    thread.start()
-    logger.info(f"[{spider.name}] 等待爬虫线程执行完成，最多等待 300 秒")
-    thread.join(timeout=300)  # 增加超时时间到300秒，确保能够完成更深层次的爬取任务
-    
-    if thread.is_alive():
-        logger.error(f"[{spider.name}] 爬虫执行超时")
-        return []
-    
-    logger.info(f"[{spider.name}] 爬虫线程执行完成，共获取 {len(result)} 条数据")
-    return result
 
 def crawl(db_manager):
     """
@@ -63,32 +31,11 @@ def crawl(db_manager):
     Args:
         db_manager: 数据库管理器
     """
-    # 设置日志级别为INFO，确保所有日志都能被输出
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    
     logger.info("开始执行爬虫任务")
     
     try:
-        # 初始化爬虫管理器
-        spider_manager = SpiderManager()
-        
-        # 使用spider_manager的crawl_all方法执行所有爬虫（多线程并发）
-        all_contests = spider_manager.crawl_all()
-        
-        # 打印爬取到的公告数量
-        logger.info(f"爬虫实际爬取到 {len(all_contests)} 条公告")
-        
-        # 存储原始公告
-        logger.info("开始存储原始公告")
-        stored_count = 0
-        for contest in all_contests:
-            if db_manager.insert_raw_notice(contest):
-                stored_count += 1
-        
-        # 获取爬取统计信息
-        stats = db_manager.get_crawl_stats()
-        logger.info(f"爬取完成：共爬取 {len(all_contests)} 条，成功入库 {stored_count} 条，数据库总计 {stats['total']} 条")
-        
+        # 直接跳过爬虫执行，使用队友已经爬取的数据
+        logger.info("跳过爬虫执行，使用队友已经爬取的数据")
         logger.info("爬虫任务执行完成")
     except Exception as e:
         logger.error(f"爬虫任务执行失败: {e}")
@@ -124,7 +71,8 @@ def perform_filter(db_manager):
         title = notice.get('title', '')
         
         # 检查是否在筛选结果中
-        is_competition = any(filtered['id'] == notice_id for filtered in filtered_notices)
+        filtered_notice = next((filtered for filtered in filtered_notices if filtered['id'] == notice_id), None)
+        is_competition = filtered_notice is not None
         
         if is_competition:
             # 标记为通过并插入竞赛库
@@ -136,9 +84,11 @@ def perform_filter(db_manager):
                 'notice_url': notice.get('notice_url', ''),
                 'title': title,
                 'publish_time': notice.get('publish_time', ''),
-                'source_department': notice.get('source_department', ''),
+                'publisher': notice.get('publisher', '') or notice.get('source_department', ''),
                 'content': notice.get('content', ''),
-                'filter_pass_time': datetime.now().isoformat()
+                'source': notice.get('spider_name', ''),
+                'filter_pass_time': datetime.now().isoformat(),
+                'confidence': filtered_notice.get('filter_confidence', 0.0)
             }
             
             # 插入竞赛库
@@ -150,6 +100,91 @@ def perform_filter(db_manager):
             rejected_count += 1
     
     logger.info(f"筛选完成：共处理 {len(pending_notices)} 条待筛选数据，筛选通过 {passed_count} 条，拒绝 {rejected_count} 条，成功写入竞赛库 {passed_count} 条")
+
+def perform_filter_all():
+    """
+    执行所有数据库的筛选，并汇总到主竞赛数据库
+    """
+    import os
+    
+    # 主数据库管理器
+    main_db_manager = DatabaseManager()
+    
+    # 初始化过滤器
+    competition_filter = CompetitionFilter()
+    
+    # 处理其他爬虫的数据库
+    data_dir = "data"
+    spider_dbs = []
+    
+    # 直接从竞赛数据库中读取数据，而不是从原始数据库中重新筛选
+    for filename in os.listdir(data_dir):
+        if filename.startswith("contest_trace_competition_") and filename != "contest_trace_competition.db":
+            # 提取爬虫名称
+            spider_name = filename.replace("contest_trace_competition_", "").replace(".db", "")
+            spider_dbs.append((spider_name, filename))
+    
+    # 汇总到主竞赛数据库的公告
+    all_competition_notices = []
+    
+    # 处理每个爬虫的竞赛数据库
+    for spider_name, comp_db_filename in spider_dbs:
+        logger.info(f"\n开始处理 {spider_name} 的竞赛数据库")
+        
+        # 初始化数据库管理器
+        spider_db_manager = DatabaseManager(data_dir=data_dir, spider_name=spider_name)
+        
+        # 获取筛选后的竞赛公告
+        comp_notices = spider_db_manager.get_competition_notices()
+        logger.info(f"{spider_name} 竞赛数据库中有 {len(comp_notices)} 条竞赛公告")
+        
+        # 直接添加所有记录，不移除重复
+        all_competition_notices.extend(comp_notices)
+    
+    logger.info(f"\n汇总后，共 {len(all_competition_notices)} 条竞赛公告")
+    
+    # 汇总到主竞赛数据库
+    if all_competition_notices:
+        logger.info(f"\n将 {len(all_competition_notices)} 条竞赛公告汇总到主竞赛数据库")
+        
+        # 清空主竞赛数据库
+        main_db_manager.clear_competition_notices()
+        
+        # 插入汇总的竞赛公告
+        inserted_count = 0
+        skipped_count = 0
+        for notice in all_competition_notices:
+            # 计算置信度
+            title = notice.get('title', '')
+            content = notice.get('content', '')
+            _, confidence = competition_filter.is_contest(title, content)
+            
+            # 准备竞赛公告数据，不使用独立数据库中的竞赛名称和级别，让 insert_competition_notice 重新计算
+            competition_notice = {
+                'raw_notice_id': notice.get('raw_notice_id', notice.get('id', 0)),
+                'notice_url': notice.get('notice_url', ''),
+                'title': title,
+                'publish_time': notice.get('publish_time', ''),
+                'publisher': notice.get('publisher', '') or notice.get('source_department', ''),
+                'content': content,
+                'source': notice.get('source', spider_name),
+                'filter_pass_time': notice.get('filter_pass_time', datetime.now().isoformat()),
+                'confidence': confidence
+                # 不设置 competition_name 和 competition_level，让 insert_competition_notice 重新计算
+            }
+            
+            if main_db_manager.insert_competition_notice(competition_notice):
+                inserted_count += 1
+                logger.debug(f"插入成功: {title[:50]}..., 置信度: {confidence:.2f}")
+            else:
+                skipped_count += 1
+                logger.debug(f"跳过: {title[:50]}...")
+        
+        logger.info(f"汇总完成：共插入 {inserted_count} 条竞赛公告到主竞赛数据库，跳过 {skipped_count} 条")
+    
+    # 导出数据到前端
+    export_data(main_db_manager)
+    logger.info("所有数据库筛选和汇总完成")
 
 def export_data(db_manager, filter_arg=None):
     """
@@ -196,6 +231,7 @@ def main():
     parser.add_argument('--crawl-only', action='store_true', help='仅执行全量爬虫，不执行筛选')
     parser.add_argument('--filter-only', action='store_true', help='仅执行筛选模块，不执行爬虫')
     parser.add_argument('--refilter-all', action='store_true', help='重置所有公告的筛选状态，重新执行全量筛选')
+    parser.add_argument('--filter-all', action='store_true', help='执行所有数据库的筛选，并汇总到主竞赛数据库')
     parser.add_argument('--filter', type=str, help='按字段筛选，格式：字段名:关键词')
     
     args = parser.parse_args()
@@ -236,6 +272,10 @@ def main():
         # 导出数据到前端
         logger.info("导出数据到前端")
         export_data(db_manager, args.filter)
+    elif args.filter_all:
+        # 执行所有数据库的筛选，并汇总到主竞赛数据库
+        logger.info("执行所有数据库的筛选，并汇总到主竞赛数据库")
+        perform_filter_all()
     elif args.export:
         # 导出数据
         logger.info("导出数据")
