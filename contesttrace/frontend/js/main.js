@@ -181,8 +181,8 @@ function renderContestList() {
     // 按月份筛选
     if (monthFilter !== 'all') {
         filteredContests = filteredContests.filter(contest => {
-            const publishDate = new Date(contest.publish_time);
-            const publishMonth = publishDate.getFullYear() + '-' + String(publishDate.getMonth() + 1).padStart(2, '0');
+            // 使用字符串前缀匹配，避免时区问题
+            const publishMonth = contest.publish_time.substring(0, 7); // YYYY-MM
             return publishMonth === monthFilter;
         });
     }
@@ -234,12 +234,6 @@ function createContestCard(contest) {
             <span class="deadline-status">(${daysLeftText})</span>
         </div>
         <div class="expandable-info" style="display: none;">
-            <div class="info-row">
-                <div class="info-item">
-                    <span class="info-label">竞赛等级：</span>
-                    <span class="info-value">${contest.competition_level || '未知等级'}</span>
-                </div>
-            </div>
             <div class="info-row">
                 <div class="info-item">
                     <span class="info-label">参赛对象：</span>
@@ -544,22 +538,7 @@ function openContestModal(contest) {
     const modalUrlEl = document.getElementById('modal-url');
     if (modalUrlEl) modalUrlEl.href = contest.url;
     
-    // 添加竞赛等级信息
-    const modalLevelEl = document.createElement('div');
-    modalLevelEl.className = 'info-item';
-    modalLevelEl.innerHTML = `
-        <span class="label">竞赛等级：</span>
-        <span>${contest.competition_level || '未知等级'}</span>
-    `;
-    
-    const modalBody = document.querySelector('.modal-body');
-    if (modalBody) {
-        // 找到发布时间元素，在其后插入竞赛等级元素
-        const publishTimeItem = modalBody.querySelector('.info-item:nth-child(3)');
-        if (publishTimeItem) {
-            publishTimeItem.insertAdjacentElement('afterend', modalLevelEl);
-        }
-    }
+
     
     // 显示模态框
     modal.style.display = 'block';

@@ -122,7 +122,13 @@ class CompetitionFilter:
             "经典诵读": 8,
             "写作大赛": 8,
             "统计建模": 8,
-            "华中杯": 8
+            "华中杯": 8,
+            "创新创业大赛": 10,
+            "职业规划大赛": 8,
+            "企业经营模拟": 8,
+            "案例分析大赛": 8,
+            "辩论赛": 8,
+            "知识竞赛": 8
         }
         
         # 次要关键词（中权重）
@@ -164,7 +170,6 @@ class CompetitionFilter:
             "招聘": -10,
             "宣讲会": -10,
             "访企拓岗": -10,
-            "心理健康": -10,
             "表彰": -10,
             "学工": -10,
             "辅导员": -10,
@@ -174,8 +179,6 @@ class CompetitionFilter:
             "放假": -10,
             "缴费": -10,
             "樱花": -10,
-            "田径运动会": -10,
-            "彩虹跑": -10,
             "优秀学院学生会": -10,
             "获全国": -10,
             "获一等奖": -10,
@@ -194,9 +197,8 @@ class CompetitionFilter:
             "名单公布": -10,
             "喜报": -10,
             "心理委员": -10,
+            "心理委员培训": -10,
             "培养考核": -10,
-            "阳光心灵": -10,
-            "文化节": -10,
             "外聘教师": -10,
             "信息统计": -10,
             "学籍信息": -10,
@@ -299,7 +301,12 @@ class CompetitionFilter:
             "暑期培训": -10,
             "辅导": -10,
             "考前辅导": -10,
-            "经验分享": -10
+            "经验分享": -10,
+            "教师教学创新大赛": -10,
+            "辅导员素质能力大赛": -10,
+            "班主任基本功": -10,
+            "教职工运动会": -10,
+            "教工组": -10
         }
     
     def filter_notices(self, notices):
@@ -376,6 +383,32 @@ class CompetitionFilter:
         title_lower = title.lower()
         content_lower = content.lower()
         
+        # 检查教师竞赛，直接排除
+        teacher_competition_keywords = [
+            "教师教学创新大赛", "辅导员素质能力大赛", "班主任基本功", 
+            "教师数智教育", "混合式教学设计", "同课异构", 
+            "泛雅杯", "智慧树杯"
+        ]
+        for keyword in teacher_competition_keywords:
+            if keyword in normalized_title or keyword in normalized_content:
+                return 0.0
+        
+        # 检查体育比赛，排除教职工相关
+        if "运动会" in normalized_title or "彩虹跑" in normalized_title or "羽毛球赛" in normalized_title:
+            if "教职工" in normalized_title or "教工组" in normalized_title:
+                return 0.0
+            elif "学生" in normalized_title:
+                # 学生田径运动会保留
+                return 0.9
+        
+        # 标题权重提升：标题中出现竞赛相关词，直接高置信度
+        title_competition_indicators = ["赛", "杯", "大赛", "挑战杯", "蓝桥杯"]
+        if any(indicator in normalized_title for indicator in title_competition_indicators):
+            # 检查是否为获奖报道
+            award_report_patterns = ["获全国", "获一等奖", "获二等奖", "获三等奖", "荣获", "斩获"]
+            if not any(pattern in normalized_title for pattern in award_report_patterns):
+                return 0.85
+        
         # 1. 快速过滤：检查排除关键词（优先）
         exclude_score = 0
         excluded = False
@@ -412,15 +445,25 @@ class CompetitionFilter:
             elif keyword in normalized_content:
                 secondary_score += weight
         
-        # 4. 特殊处理：包含"杯"且不包含排除关键词的通知
+        # 4. 内容特征强化：增加置信度
+        content_positive_features = [
+            "报名截止", "参赛对象", "奖项设置", "一等奖", "二等奖", 
+            "颁发证书", "奖金", "推荐参加省赛", "推荐参加国赛",
+            "指导老师", "评委", "答辩", "路演"
+        ]
+        for feature in content_positive_features:
+            if feature in normalized_content:
+                strong_score += 2
+        
+        # 5. 特殊处理：包含"杯"且不包含排除关键词的通知
         if "杯" in normalized_title and strong_score > 0:
             strong_score += 3
         
-        # 5. 特殊处理：包含"大赛"且不包含排除关键词的通知
+        # 6. 特殊处理：包含"大赛"且不包含排除关键词的通知
         if "大赛" in normalized_title and strong_score > 0:
             strong_score += 3
         
-        # 6. 特殊处理：包含"竞赛"且不包含排除关键词的通知
+        # 7. 特殊处理：包含"竞赛"且不包含排除关键词的通知
         if "竞赛" in normalized_title and strong_score > 0:
             strong_score += 3
         

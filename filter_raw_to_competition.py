@@ -101,8 +101,29 @@ def process_database(raw_db_path, competition_db_path, competition_filter, data_
     spider_name_idx = 7 if (has_crawl_time and has_spider_name) else 6 if has_spider_name else None
     
     # 执行查询
-    raw_cursor.execute(query)
-    raw_notices = raw_cursor.fetchall()
+    try:
+        raw_cursor.execute(query)
+        raw_notices = raw_cursor.fetchall()
+    except sqlite3.OperationalError as e:
+        logger.error(f"执行查询失败: {e}")
+        logger.error(f"数据库结构可能不同，尝试使用默认表结构")
+        # 尝试使用默认表结构
+        try:
+            raw_cursor.execute('SELECT id, title, url, source, publish_time, crawl_time, content, spider_name FROM notices')
+            raw_notices = raw_cursor.fetchall()
+            # 调整索引位置
+            url_idx = 2
+            source_idx = 3
+            publish_time_idx = 4
+            crawl_time_idx = 5
+            content_idx = 6
+            spider_name_idx = 7
+            has_spider_name = True
+            has_crawl_time = True
+            logger.info(f"使用默认表结构成功，获取到 {len(raw_notices)} 条记录")
+        except Exception as e2:
+            logger.error(f"使用默认表结构也失败: {e2}")
+            raw_notices = []
     
     logger.info(f"从 {os.path.basename(raw_db_path)} 获取到 {len(raw_notices)} 条记录")
     

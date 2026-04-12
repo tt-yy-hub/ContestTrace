@@ -72,26 +72,53 @@ async function loadContests() {
                 const data = await response.json();
                 console.log('从data/contests.json加载数据成功，共', data.length, '条竞赛');
                 
+                // 来源名称映射表
+                const sourceMap = {
+                    'hbu_gsxy_notice_spider': '工商管理学院',
+                    'hbu_jjxy_notice_spider': '经济与贸易学院',
+                    'hbu_sxy_notice_spider': '统计与数学学院',
+                    'hbu_wgyxy_notice_spider': '外国语学院',
+                    'hbu_xgch_notice_spider': '学生工作处',
+                    'hbu_syjxz_notice_spider': '实验教学中心',
+                    'hbu_jwc_notice_spider': '教务处',
+                    'hbu_xwcbxy_notice_spider': '新闻与传播学院',
+                    'hbu_lyjdxy_notice_spider': '旅游与酒店管理学院',
+                    'hbu_tw_notice_spider': '湖北经济学院团委',
+                    'hbu_ysxy_notice_spider': '艺术学院',
+                    'hbu_jrxy_notice_spider': '金融学院',
+                    'hbu_xxgcxy_notice_spider': '信息工程学院',
+                    'hbu_xxglxy_notice_spider': '信息管理学院'
+                };
+                
                 // 处理数据格式，确保字段名与前端代码匹配
-                const processedData = data.map(item => ({
-                    id: item.id || item.raw_notice_id || Math.floor(Math.random() * 10000),
-                    title: item.title || '无标题',
-                    url: item.url || item.notice_url || '',
-                    source: item.source || item.source_department || '未知来源',
-                    publish_time: item.publish_time || '2025-01-01',
-                    deadline: item.deadline || item.sign_up_deadline || '',
-                    category: item.category || '其他竞赛',
-                    organizer: item.organizer || item.source_department || '未知',
-                    participants: item.participants || '全体学生',
-                    prize: item.prize || '未知',
-                    requirement: item.requirement || '',
-                    contact: item.contact || '',
-                    content: item.content || '无详细内容',
-                    summary: item.summary || (item.content ? item.content.substring(0, 100) + '...' : '无摘要'),
-                    keywords: item.keywords || (item.tags ? item.tags.split(',') : []),
-                    tags: item.tags || (item.keywords ? item.keywords.join(',') : ''),
-                    spider_name: item.spider_name || item.source_department || '未知'
-                }));
+                const processedData = data.map(item => {
+                    // 确定来源名称
+                    let sourceName = item.source_department || item.source || '未知来源';
+                    // 如果来源是爬虫标识，映射为可读名称
+                    if (sourceMap[sourceName]) {
+                        sourceName = sourceMap[sourceName];
+                    }
+                    
+                    return {
+                        id: item.id || item.raw_notice_id || Math.floor(Math.random() * 10000),
+                        title: item.title || '无标题',
+                        url: item.url || item.notice_url || '',
+                        source: sourceName,
+                        publish_time: item.publish_time || '2025-01-01',
+                        deadline: item.deadline || item.sign_up_deadline || '',
+                        category: item.category || '其他竞赛',
+                        organizer: item.organizer || sourceName || '未知',
+                        participants: item.participants || '全体学生',
+                        prize: item.prize || '未知',
+                        requirement: item.requirement || '',
+                        contact: item.contact || '',
+                        content: item.content || '无详细内容',
+                        summary: item.summary || (item.content ? item.content.substring(0, 100) + '...' : '无摘要'),
+                        keywords: item.keywords || (item.tags ? item.tags.split(',') : []),
+                        tags: item.tags || (item.keywords ? item.keywords.join(',') : ''),
+                        spider_name: item.spider_name || sourceName || '未知'
+                    };
+                });
                 
                 return processedData;
             } else {

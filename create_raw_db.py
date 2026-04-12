@@ -133,29 +133,98 @@ def merge_db(db_file, db_name):
         dest_cursor = dest_conn.cursor()
         
         # 查询源数据库中的所有记录
-        src_cursor.execute('SELECT * FROM raw_notices')
-        rows = src_cursor.fetchall()
+        try:
+            # 优先从notices表中读取数据，因为它的结构更完整
+            src_cursor.execute('SELECT * FROM notices')
+            rows = src_cursor.fetchall()
+            logger.info(f"从notices表中获取到 {len(rows)} 条记录")
+        except sqlite3.OperationalError as e:
+            logger.error(f"从notices表读取失败: {e}")
+            # 尝试从raw_notices表中读取数据
+            try:
+                src_cursor.execute('SELECT * FROM raw_notices')
+                rows = src_cursor.fetchall()
+                logger.info(f"从raw_notices表中获取到 {len(rows)} 条记录")
+            except Exception as e2:
+                logger.error(f"从raw_notices表读取也失败: {e2}")
+                return 0
         
         # 插入记录到目标数据库
         inserted_count = 0
         for row in rows:
             try:
                 # 从源记录中提取字段
-                # 源表结构: id, notice_url, title, publish_time, publisher, content, crawl_time, filter_status, filter_time, review_status, review_time, review_result, review_notes, filter_confidence
-                notice_id = row[0]
-                notice_url = row[1]
-                title = row[2]
-                publish_time = row[3]
-                publisher = row[4]
-                content = row[5]
-                crawl_time = row[6]
+                # notices表结构: id, title, url, source, publish_time, crawl_time, deadline, category, organizer, participants, prize, requirement, contact, content, keywords, tags, spider_name, created_at, updated_at
+                if len(row) >= 19:
+                    notice_id = row[0]
+                    title = row[1]
+                    notice_url = row[2]
+                    publisher = row[3]
+                    publish_time = row[4]
+                    crawl_time = row[5]
+                    deadline = row[6]
+                    category = row[7]
+                    organizer = row[8]
+                    participants = row[9]
+                    prize = row[10]
+                    requirement = row[11]
+                    contact = row[12]
+                    content = row[13]
+                    keywords = row[14]
+                    tags = row[15]
+                    spider_name = row[16]
+                    created_at = row[17]
+                    updated_at = row[18]
+                elif len(row) >= 8:
+                    # 假设表结构: id, title, url, source, publish_time, crawl_time, content, spider_name
+                    notice_id = row[0]
+                    title = row[1]
+                    notice_url = row[2]
+                    publisher = row[3]
+                    publish_time = row[4]
+                    crawl_time = row[5]
+                    content = row[6]
+                    spider_name = row[7] if len(row) > 7 else db_name.replace("contest_trace_raw_", "").replace(".db", "")
+                    deadline = None
+                    category = None
+                    organizer = None
+                    participants = None
+                    prize = None
+                    requirement = None
+                    contact = None
+                    keywords = None
+                    tags = None
+                    created_at = datetime.now().isoformat()
+                    updated_at = datetime.now().isoformat()
+                elif len(row) >= 7:
+                    # 假设表结构: id, notice_url, title, publish_time, publisher, content, crawl_time
+                    notice_id = row[0]
+                    notice_url = row[1]
+                    title = row[2]
+                    publish_time = row[3]
+                    publisher = row[4]
+                    content = row[5]
+                    crawl_time = row[6]
+                    spider_name = db_name.replace("contest_trace_raw_", "").replace(".db", "")
+                    deadline = None
+                    category = None
+                    organizer = None
+                    participants = None
+                    prize = None
+                    requirement = None
+                    contact = None
+                    keywords = None
+                    tags = None
+                    created_at = datetime.now().isoformat()
+                    updated_at = datetime.now().isoformat()
+                else:
+                    # 无法处理的表结构
+                    logger.error(f"无法处理的表结构，行长度: {len(row)}")
+                    continue
                 
                 # 准备插入数据
                 url = notice_url
                 source = publisher
-                spider_name = db_name.replace("contest_trace_raw_", "").replace(".db", "")
-                created_at = datetime.now().isoformat()
-                updated_at = datetime.now().isoformat()
                 
                 # 执行插入
                 dest_cursor.execute('''
@@ -166,8 +235,8 @@ def merge_db(db_file, db_name):
                  spider_name, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ''', (title, url, source, publish_time, crawl_time, 
-                      None, None, None, None, None, 
-                      None, None, content, None, None, 
+                      deadline, category, organizer, participants, prize, 
+                      requirement, contact, content, keywords, tags, 
                       spider_name, created_at, updated_at))
                 
                 if dest_cursor.rowcount > 0:

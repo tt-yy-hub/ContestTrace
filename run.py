@@ -34,9 +34,16 @@ def crawl(db_manager):
     logger.info("开始执行爬虫任务")
     
     try:
-        # 直接跳过爬虫执行，使用队友已经爬取的数据
-        logger.info("跳过爬虫执行，使用队友已经爬取的数据")
-        logger.info("爬虫任务执行完成")
+        # 执行爬虫
+        from contesttrace.core.spiders.spider_manager import SpiderManager
+        spider_manager = SpiderManager()
+        contests = spider_manager.crawl_all()
+        
+        # 保存爬取的数据
+        for contest in contests:
+            db_manager.insert_raw_notice(contest)
+        
+        logger.info(f"爬虫任务执行完成，共获取 {len(contests)} 条公告")
     except Exception as e:
         logger.error(f"爬虫任务执行失败: {e}")
         import traceback
