@@ -403,7 +403,7 @@ function renderStatistics() {
             data: {
                 labels: monthLabels.length > 0 ? monthLabels : ['无数据'],
                 datasets: [{
-                    label: '竞赛数量',
+                    label: '公告数量',
                     data: monthData.length > 0 ? monthData : [0],
                     backgroundColor: '#667eea',
                     borderColor: '#764ba2',
@@ -415,7 +415,7 @@ function renderStatistics() {
                 plugins: {
                     title: {
                         display: true,
-                        text: '竞赛月份统计'
+                        text: '竞赛公告月份统计'
                     }
                 },
                 scales: {
