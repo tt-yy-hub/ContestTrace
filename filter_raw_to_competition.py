@@ -85,7 +85,14 @@ def process_database(raw_db_path, competition_db_path, competition_filter, data_
     if has_spider_name:
         select_columns.append('spider_name')
     
-    query = f'SELECT {", ".join(select_columns)} FROM raw_notices'
+    # 只筛选当天新爬取到的原始公告
+    from datetime import date, datetime
+    today = date.today().isoformat()
+    
+    if has_crawl_time:
+        query = 'SELECT ' + ', '.join(select_columns) + ' FROM raw_notices WHERE DATE(crawl_time) = "' + today + '"'
+    else:
+        query = 'SELECT ' + ', '.join(select_columns) + ' FROM raw_notices'
     
     # 确定索引位置
     url_idx = 2

@@ -45,7 +45,7 @@ CATEGORY = "通知公告"
 SPIDER_NAME = "hbue_ie_notice_spider"
 
 DATE_START = date(2025, 1, 1)
-DATE_END = date(2026, 4, 9)
+DATE_END = date.today()
 
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "

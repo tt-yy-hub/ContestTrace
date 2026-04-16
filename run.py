@@ -34,16 +34,59 @@ def crawl(db_manager):
     logger.info("开始执行爬虫任务")
     
     try:
-        # 执行爬虫
-        from contesttrace.core.spiders.spider_manager import SpiderManager
-        spider_manager = SpiderManager()
-        contests = spider_manager.crawl_all()
+        # 执行队友的爬虫
+        import subprocess
+        import os
         
-        # 保存爬取的数据
-        for contest in contests:
-            db_manager.insert_raw_notice(contest)
+        # 运行队友的爬虫脚本
+        logger.info("运行队友的爬虫...")
+        result = subprocess.run(
+            [sys.executable, "run_teammate_spiders.py"],
+            capture_output=True,
+            text=True
+        )
         
-        logger.info(f"爬虫任务执行完成，共获取 {len(contests)} 条公告")
+        if result.returncode == 0:
+            logger.info("队友的爬虫运行成功")
+            # 输出爬虫的日志
+            logger.info("爬虫输出:")
+            logger.info(result.stdout)
+        else:
+            logger.error("队友的爬虫运行失败")
+            logger.error(f"返回码: {result.returncode}")
+            logger.error(f"错误输出: {result.stderr}")
+        
+        # 合并原始数据库
+        logger.info("合并原始数据库...")
+        merge_result = subprocess.run(
+            [sys.executable, "create_raw_db.py"],
+            capture_output=True,
+            text=True
+        )
+        
+        if merge_result.returncode == 0:
+            logger.info("原始数据库合并成功")
+        else:
+            logger.error("原始数据库合并失败")
+            logger.error(f"返回码: {merge_result.returncode}")
+            logger.error(f"错误输出: {merge_result.stderr}")
+        
+        # 执行筛选
+        logger.info("执行筛选...")
+        filter_result = subprocess.run(
+            [sys.executable, "filter_raw_to_competition.py"],
+            capture_output=True,
+            text=True
+        )
+        
+        if filter_result.returncode == 0:
+            logger.info("筛选成功")
+        else:
+            logger.error("筛选失败")
+            logger.error(f"返回码: {filter_result.returncode}")
+            logger.error(f"错误输出: {filter_result.stderr}")
+        
+        logger.info("爬虫任务执行完成")
     except Exception as e:
         logger.error(f"爬虫任务执行失败: {e}")
         import traceback
@@ -258,15 +301,11 @@ def main():
     db_manager = DatabaseManager()
     
     if args.crawl or args.crawl_only:
-        # 执行爬虫
+        # 执行爬虫（包含爬取、合并、筛选和导出）
         crawl(db_manager)
         
-        # 如果不是仅爬取，则执行筛选
+        # 如果不是仅爬取，则导出数据到前端
         if not args.crawl_only:
-            # 执行筛选
-            logger.info("执行筛选")
-            perform_filter(db_manager)
-            
             # 导出数据到前端
             logger.info("导出数据到前端")
             export_data(db_manager, args.filter)
