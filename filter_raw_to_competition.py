@@ -53,16 +53,11 @@ def process_database(raw_db_path, competition_db_path, competition_filter, data_
         logger.error(f"原始数据库不存在: {raw_db_path}")
         return 0
     
-    # 删除已存在的竞赛数据库
-    if os.path.exists(competition_db_path):
-        os.remove(competition_db_path)
-        logger.info(f"已删除旧的竞赛数据库: {competition_db_path}")
-    
     # 连接原始数据库
     raw_conn = sqlite3.connect(raw_db_path)
     raw_cursor = raw_conn.cursor()
     
-    # 创建竞赛数据库
+    # 连接或创建竞赛数据库
     competition_conn = sqlite3.connect(competition_db_path)
     competition_cursor = competition_conn.cursor()
     
@@ -148,7 +143,18 @@ def process_database(raw_db_path, competition_db_path, competition_filter, data_
     logger.info(f"从 {os.path.basename(raw_db_path)} 筛选出 {len(filtered_notices)} 条竞赛通知")
     
     # 处理筛选结果
+    inserted_count = 0
     for notice in filtered_notices:
+        # 检查是否已存在相同的记录
+        competition_cursor.execute('''
+        SELECT id FROM competition_notices WHERE raw_notice_id = ? OR notice_url = ?
+        ''', (notice.get('id'), notice.get('notice_url', '')))
+        existing_record = competition_cursor.fetchone()
+        
+        if existing_record:
+            logger.debug(f"记录已存在，跳过: {notice.get('title')}")
+            continue
+        
         # 准备竞赛公告数据
         competition_notice = {
             'raw_notice_id': notice.get('id'),
@@ -190,6 +196,7 @@ def process_database(raw_db_path, competition_db_path, competition_filter, data_
             processed_contest.get('contact'),
             notice.get('filter_confidence', 0.0)
         ))
+        inserted_count += 1
     
     # 提交事务
     competition_conn.commit()
@@ -198,14 +205,13 @@ def process_database(raw_db_path, competition_db_path, competition_filter, data_
     raw_conn.close()
     competition_conn.close()
     
-    logger.info(f"筛选完成，共插入 {len(filtered_notices)} 条竞赛公告到 {competition_db_path}")
-    return len(filtered_notices)
+    logger.info(f"筛选完成，共插入 {inserted_count} 条竞赛公告到 {competition_db_path}")
+    return inserted_count
 
 def filter_raw_to_competition():
     """
     从原始数据库筛选数据到竞赛数据库
-    - 处理独立原始数据库到对应独立竞赛数据库
-    - 处理汇总原始数据库到汇总竞赛数据库
+    - 只处理汇总原始数据库到汇总竞赛数据库
     """
     # 初始化竞赛指南解析器并加载指南数据
     from contesttrace.core.utils.contest_guide_parser import contest_guide_parser
@@ -222,24 +228,7 @@ def filter_raw_to_competition():
     competition_db_path = os.path.join('data', 'competiton.db')
     process_database(raw_db_path, competition_db_path, competition_filter, data_processor)
     
-    # 处理独立的原始数据库
-    logger.info("开始处理独立原始数据库...")
-    data_dir = os.path.join('data')
-    total_filtered = 0
-    
-    for file_name in os.listdir(data_dir):
-        if file_name.startswith('contest_trace_raw_') and file_name.endswith('.db'):
-            # 提取部门名称
-            dept_name = file_name.replace('contest_trace_raw_', '').replace('.db', '')
-            # 构建独立原始数据库路径
-            raw_db_path = os.path.join(data_dir, file_name)
-            # 构建独立竞赛数据库路径
-            competition_db_path = os.path.join(data_dir, f'contest_trace_competition_{dept_name}.db')
-            # 处理该数据库
-            filtered_count = process_database(raw_db_path, competition_db_path, competition_filter, data_processor)
-            total_filtered += filtered_count
-    
-    logger.info(f"所有数据库处理完成，共筛选出 {total_filtered} 条竞赛通知")
+    logger.info("数据库处理完成")
     
     # 导出数据到前端
     logger.info("开始导出数据到前端...")

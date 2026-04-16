@@ -537,7 +537,25 @@ function openContestModal(contest) {
     const deadlineInfoItem = modalDeadlineEl ? modalDeadlineEl.closest('.info-item') : null;
     if (deadlineInfoItem) {
         if (contest.deadline) {
-            if (modalDeadlineEl) modalDeadlineEl.textContent = contest.deadline;
+            // 提取deadline中的标签和日期
+            if (contest.deadline.includes('活动日期')) {
+                // 找到标签元素并修改
+                const labelEl = deadlineInfoItem.querySelector('.label');
+                if (labelEl) labelEl.textContent = '活动日期：';
+                // 只显示日期部分
+                modalDeadlineEl.textContent = contest.deadline.replace('活动日期：', '');
+            } else if (contest.deadline.includes('截止日期')) {
+                // 找到标签元素并修改
+                const labelEl = deadlineInfoItem.querySelector('.label');
+                if (labelEl) labelEl.textContent = '截止日期：';
+                // 只显示日期部分
+                modalDeadlineEl.textContent = contest.deadline.replace('截止日期：', '');
+            } else {
+                // 默认标签
+                const labelEl = deadlineInfoItem.querySelector('.label');
+                if (labelEl) labelEl.textContent = '截止时间：';
+                modalDeadlineEl.textContent = contest.deadline;
+            }
             deadlineInfoItem.style.display = 'block';
         } else {
             deadlineInfoItem.style.display = 'none';

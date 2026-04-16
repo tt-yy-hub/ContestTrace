@@ -206,19 +206,14 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 
-# 1. 自动生成的数据库文件（绝对不上传）
-contest.db
-*.db
-*.sqlite
-
-# 2. data 目录：默认忽略生成文件，但保留训练样本与 CI 快照路径
-data/*
-!data/.gitkeep
-!data/training_data/
-!data/training_data/**
-!data/reports/
-!data/reports/latest_snapshot.csv
-data/attachments/
+# 2. data 目录：允许上传所有文件
+# data/*
+# !data/.gitkeep
+# !data/training_data/
+# !data/training_data/**
+# !data/reports/
+# !data/reports/latest_snapshot.csv
+# data/attachments/
 
 # 3. 日志/缓存/静态页面/导出文件（自动生成，绝不上传）
 logs/
