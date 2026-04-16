@@ -11,8 +11,15 @@ function formatDate(dateString) {
 // 计算剩余天数
 function calculateDaysLeft(deadline) {
     if (!deadline) return -1;
+    // 提取日期部分
+    const dateMatch = deadline.match(/(\d{4}-\d{2}-\d{2}|\d{4}年\d{1,2}月\d{1,2}日)/);
+    if (!dateMatch) return -1;
+    const dateStr = dateMatch[0];
+    // 转换为标准日期格式
+    const normalizedDate = dateStr.replace(/年|月/g, '-').replace(/日/g, '');
     const today = new Date();
-    const deadlineDate = new Date(deadline);
+    const deadlineDate = new Date(normalizedDate);
+    if (isNaN(deadlineDate.getTime())) return -1;
     const timeDiff = deadlineDate - today;
     return Math.ceil(timeDiff / (1000 * 3600 * 24));
 }

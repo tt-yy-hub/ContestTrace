@@ -280,7 +280,9 @@ class DatabaseManager:
             contest = {
                 'id': raw_notice_id,
                 'title': title,
-                'content': content
+                'content': content,
+                'publish_time': publish_time,
+                'publisher': publisher
             }
             processed_contest = data_processor.process_contest(contest)
             

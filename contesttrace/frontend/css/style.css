@@ -480,6 +480,21 @@ body {
     box-shadow: 0 2px 8px rgba(39, 174, 96, 0.1);
 }
 
+/* 截止日期和活动日期样式 */
+.contest-card .deadline.deadline-urgent {
+    color: var(--danger-color);
+    background-color: #fef5f5;
+    border-color: #fde2e2;
+    box-shadow: 0 2px 8px rgba(231, 76, 60, 0.1);
+}
+
+.contest-card .deadline.deadline-active {
+    color: var(--success-color);
+    background-color: #f0f9f0;
+    border-color: #d1fae5;
+    box-shadow: 0 2px 8px rgba(39, 174, 96, 0.1);
+}
+
 .contest-card .deadline:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);

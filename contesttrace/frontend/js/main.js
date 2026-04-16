@@ -217,8 +217,27 @@ function createContestCard(contest) {
     const daysLeftClass = getDaysLeftClass(daysLeft);
     const daysLeftText = getDaysLeftText(daysLeft);
     
+    // 根据前缀设置样式类
+    let deadlineClass = daysLeftClass;
+    if (contest.deadline && contest.deadline.startsWith('截止日期：')) {
+        deadlineClass += ' deadline-urgent';
+    } else if (contest.deadline && contest.deadline.startsWith('活动日期：')) {
+        deadlineClass += ' deadline-active';
+    }
+    
     // 处理tags，确保它是一个数组
     const tags = Array.isArray(contest.tags) ? contest.tags : (contest.tags ? contest.tags.split(',') : []);
+    
+    // 生成deadline部分的HTML
+    let deadlineHtml = '';
+    if (contest.deadline) {
+        deadlineHtml = `
+        <div class="deadline ${deadlineClass}">
+            <span class="deadline-value">${contest.deadline}</span>
+            <span class="deadline-status">(${daysLeftText})</span>
+        </div>
+        `;
+    }
     
     card.innerHTML = `
         <h3>${contest.title || '无标题'}</h3>
@@ -228,11 +247,7 @@ function createContestCard(contest) {
             <span class="competition-level">${contest.competition_level || '未知等级'}</span>
         </div>
         <p class="summary">${contest.summary || (contest.content ? contest.content.substring(0, 100) + '...' : '无摘要')}</p>
-        <div class="deadline ${daysLeftClass}">
-            <span class="deadline-label">截止时间：</span>
-            <span class="deadline-value">${contest.deadline || '未知'}</span>
-            <span class="deadline-status">(${daysLeftText})</span>
-        </div>
+        ${deadlineHtml}
         <div class="expandable-info" style="display: none;">
             <div class="info-row">
                 <div class="info-item">
@@ -517,8 +532,17 @@ function openContestModal(contest) {
     const modalPublishTimeEl = document.getElementById('modal-publish-time');
     if (modalPublishTimeEl) modalPublishTimeEl.textContent = formatDate(contest.publish_time);
     
+    // 处理截止时间，为空时不显示
     const modalDeadlineEl = document.getElementById('modal-deadline');
-    if (modalDeadlineEl) modalDeadlineEl.textContent = formatDate(contest.deadline) || '未知';
+    const deadlineInfoItem = modalDeadlineEl ? modalDeadlineEl.closest('.info-item') : null;
+    if (deadlineInfoItem) {
+        if (contest.deadline) {
+            if (modalDeadlineEl) modalDeadlineEl.textContent = contest.deadline;
+            deadlineInfoItem.style.display = 'block';
+        } else {
+            deadlineInfoItem.style.display = 'none';
+        }
+    }
     
     const modalOrganizerEl = document.getElementById('modal-organizer');
     if (modalOrganizerEl) modalOrganizerEl.textContent = contest.organizer || '未知';
