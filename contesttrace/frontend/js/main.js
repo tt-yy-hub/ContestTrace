@@ -239,12 +239,23 @@ function createContestCard(contest) {
         `;
     }
     
+    // 生成meta部分的HTML
+    let metaHtml = `
+        <span class="source">${contest.source || '未知来源'}</span>
+    `;
+    
+    if (contest.publish_time) {
+        metaHtml += ` | <span class="publish-time">${formatDate(contest.publish_time)}</span>`;
+    }
+    
+    if (contest.competition_level && contest.competition_level !== '未知等级' && contest.competition_level !== '') {
+        metaHtml += ` | <span class="competition-level">${contest.competition_level}</span>`;
+    }
+    
     card.innerHTML = `
         <h3>${contest.title || '无标题'}</h3>
         <div class="meta">
-            <span class="source">${contest.source || '未知来源'}</span> | 
-            <span class="publish-time">${formatDate(contest.publish_time) || '未知时间'}</span> | 
-            <span class="competition-level">${contest.competition_level || '未知等级'}</span>
+            ${metaHtml}
         </div>
         <p class="summary">${contest.summary || (contest.content ? contest.content.substring(0, 100) + '...' : '无摘要')}</p>
         ${deadlineHtml}
