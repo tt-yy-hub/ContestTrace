@@ -1266,83 +1266,1317 @@ class SmartParser:
         logger.debug(f"parse_deadline 返回: {result}")
         return result
 
-    # ---------- 组织者（自然语言 + publisher 回退）----------
-    def parse_organizer(self, text: str, publisher: str = "") -> str:
-        if not text and not publisher:
+    # ---------- organizer / participants / prize / contact (aligned with repo-root smart_parser.py) ----------
+    def _remove_trailing_punct(self, text: str) -> str:
+        """移除尾部标点符号"""
+        return re.sub(r'[，。；;、\s]+$', '', text.strip())
+    
+
+    def _is_valid_organizer(self, text: str) -> bool:
+        """校验组织方字段，避免将活动说明/标题误识别为组织方"""
+        if not text:
+            return False
+        value = self._remove_trailing_punct(text)
+        if len(value) < 2:
+            return False
+        if len(value) > 30:
+            # 多机构并列主办场景允许更长文本（如“共青团xx、教育厅、学联”）
+            if "、" not in value:
+                return False
+            parts = [p.strip() for p in re.split(r"[、,，和及与]", value) if p.strip()]
+            if len(parts) < 2:
+                return False
+        
+        # 组织方应避免带有活动描述、通知语气和明显联系方式词
+        invalid_tokens = [
+            '通知', '活动', '比赛', '竞赛', '举办', '报名', '参赛',
+            '时间', '内容', '要求', '作品', '指南', '选拔', '电话', '邮箱',
+            '他们', '穿梭', '检录', '赛场', '同学们', '我院', '我校',
+            '选手', '短信', '评审团', '收到', '底部', '大活中心',
+            '提高', '展示', '入选', '每年', '同时', '旨在', '激发', '强化', '以二级'
+        ]
+        if any(tok in value for tok in invalid_tokens):
+            return False
+        
+        # 过滤泛化前缀和明显非机构短语
+        invalid_prefixes = ['本次', '全国', '在', '结合', '为了', '全体', '该', '学院', '则', '并', '或', '及']
+        if any(value.startswith(prefix) for prefix in invalid_prefixes):
+            return False
+        if re.match(r'^(?:提高|展示|激发|入选|每年|同时|旨在|强化|以二级|第[一二三四五六七八九十0-9]+)', value):
+            return False
+        if any(tok in value for tok in ['大学生', '考生', '同学']):
+            return False
+        if any(tok in value for tok in ['个人中心', '学院组委会']):
+            return False
+        # 拦截说明性短语，避免把赛事介绍句误识别为组织方
+        invalid_phrases = [
+            '有广泛影响力', '全国性大学', '国家级权威赛事', '正式文件落款日期为准',
+            '教育行政主管部门', '研究会', '本届大赛',
+            '选手将收到', '评审团由学院'
+        ]
+        if any(p in value for p in invalid_phrases):
+            return False
+        
+        # 句末标点和数字比例过高通常是误截文本
+        if any(ch in value for ch in ['。', '！', '？']):
+            return False
+        if sum(ch.isdigit() for ch in value) >= 3:
+            return False
+        
+        # 必须包含机构后缀，避免截出说明性短语
+        org_suffixes = ['学院', '大学', '学校', '系', '部', '处', '中心', '部门', '组委会', '协会', '学会', '联合会', '委员会', '团委', '研究生会', '学生会']
+        if not any(s in value for s in org_suffixes):
+            return False
+
+        # 过滤过于泛化的“系”级别短称，避免误把叙述片段识别为组织方
+        generic_departments = {'工程系', '管理系', '会计系', '金融系', '经济系', '统计系'}
+        if value in generic_departments:
+            return False
+        
+        return True
+
+    def _normalize_organizer(self, text: str) -> str:
+        """清洗组织方候选值，去除动作词和通知描述残留"""
+        value = self._remove_trailing_punct(text)
+        if not value:
             return ""
-        # 优先级从高到低的自然语言模式
+        
+        # 去掉常见前缀标签
+        value = re.sub(r'^(?:主办单位|承办单位|主办方|承办方|主办|承办|协办单位|协办方|协办|指导单位|组织单位|负责单位)[:：]?\s*', '', value)
+        value = re.sub(r'^[的“"《\s]+', '', value)
+        value = re.sub(r'^(?:是|由|在|于|及|和|与|并|年)+', '', value)
+        
+        # 截断到首个明确分隔符，避免带入后续说明
+        value = re.split(r'[。；;，]|(?:\s{2,})|(?:（)|(?:\()', value)[0].strip()
+        
+        # 去掉尾部动作词，保留机构主体名
+        value = re.sub(r'(?:主办|承办|协办|举办|组织|开展|发起|通知|校赛|选拔赛)$', '', value).strip()
+        value = re.sub(r'^(?:由|是由|作为|针对|对于)\s*', '', value)
+        
+        # 尝试抽取以机构后缀结尾的核心片段（兼容历史乱码库中的“ѧԺ”）
+        org_suffix_pattern = (
+            r'([^，。；;\s]{2,30}?(?:学院|大学|中心|组委会|协会|部门|处|委员会|团委|研究生会|学生会|ѧԺ))'
+        )
+        matches = re.findall(org_suffix_pattern, value)
+        if matches:
+            value = matches[-1].strip()
+        
+        # 对“学院/ѧԺ”做更短机构名抽取，避免前置活动描述残留
+        short_school_pattern = r'([^，。；;\s]{2,8}(?:学院|ѧԺ))'
+        short_matches = re.findall(short_school_pattern, value)
+        if short_matches:
+            value = short_matches[-1].strip()
+        
+        # 过长时再做一次“尾部机构名”收敛，避免把前置描述一并带入
+        tight_suffix_pattern = (
+            r'([^，。；;\s]{2,12}?(?:学院|大学|中心|组委会|协会|部门|处|委员会|团委|研究生会|学生会|ѧԺ))$'
+        )
+        m_tight = re.search(tight_suffix_pattern, value)
+        if m_tight:
+            value = m_tight.group(1).strip()
+        
+        return self._remove_trailing_punct(value)
+    
+    def _clean_candidate_block(self, text: str) -> str:
+        """清理候选文本块，去掉公告语气和冗余描述"""
+        cleaned = self._clean_text(text)
+        cleaned = re.sub(r'关于组织[^，。；;\n]{0,60}(参加|开展|举办)', '', cleaned)
+        cleaned = re.sub(r'关于[^，。；;\n]{0,40}通知', '', cleaned)
+        cleaned = re.sub(r'文件由[^，。；;\n]{0,40}(主办|承办)', '', cleaned)
+        cleaned = re.sub(r'现将[^，。；;\n]{0,40}(通知如下|有关事项通知如下)', '', cleaned)
+        return cleaned
+
+    def _pick_core_unit(self, text: str) -> str:
+        """提取核心单位名，优先学院/学校/部门等机构后缀"""
+        org_pattern = (
+            r'([\u4e00-\u9fa5A-Za-z]{2,30}'
+            r'(?:湖北经济学院|学院|大学|学校|系|部|处|中心|部门|组委会|协会|委员会|团委|研究生会|学生会))'
+        )
+        matches = re.findall(org_pattern, text)
+        if not matches:
+            return ""
+
+        suffix_priority = ['湖北经济学院', '学院', '大学', '学校', '系', '部', '处', '委员会', '团委', '研究生会', '学生会', '组委会', '协会', '部门', '中心']
+        unique = list(set(matches))
+
+        def _score(candidate: str):
+            idx = len(suffix_priority)
+            for i, suffix in enumerate(suffix_priority):
+                if candidate.endswith(suffix):
+                    idx = i
+                    break
+            return (idx, len(candidate), candidate)
+
+        for candidate in sorted(unique, key=_score):
+            if any(tok in candidate for tok in ['此次', '本次', '大赛', '通知', '比赛', '竞赛', '关于']):
+                continue
+            normalized = self._normalize_organizer(candidate)
+            if self._is_valid_organizer(normalized):
+                return normalized
+        return ""
+
+    def _extract_joint_hosts(self, text: str) -> str:
+        """提取“由A、B、C和D共同主办”格式的联合主办单位"""
+        # 例如：由共青团中央、中国科协、教育部和全国学联共同主办
         patterns = [
-            r'本次活动由\s*([^，。；;\n]{4,50})\s*主办',
-            r'由\s*([^，。；;\n]{4,50})\s*(?:主办|承办|举办)',
-            r'主办[单位]?[：:]\s*([^。\n]{10,200})',
-            r'承办[单位]?[：:]\s*([^。\n]{10,200})',
-            r'(?:本次大赛|本赛事)\s*由\s*([^，。；;\n]{4,50})\s*主办',
-            r'[主办承办]{2}单位[：:]\s*([^。\n]{10,200})',
-            r'组织单位[：:]\s*([^。\n]{10,200})',
-            r'发文单位[：:]\s*([^。\n]{4,50})',
+            r'由\s*([^。；;\n]{4,120}?)\s*(?:共同)?主办',
+            r'由\s*([^。；;\n]{4,120}?)\s*(?:共同)?举办',
+            r'由\s*([^。；;\n]{4,200}?)\s*联合发起并主办',
+            r'由\s*([^。；;\n]{4,200}?)\s*联合主办',
+            r'([^。；;\n]{4,200}?)\s*联合发起并主办',
+            r'([^。；;\n]{4,200}?)\s*联合主办',
+        ]
+        for pattern in patterns:
+            m = re.search(pattern, text)
+            if not m:
+                continue
+            block = m.group(1).strip()
+            # 只保留机构相关片段，过滤描述词
+            parts = re.split(r'[、,，和及与]', block)
+            units = []
+            for part in parts:
+                unit = part.strip()
+                if not unit:
+                    continue
+                if any(tok in unit for tok in ['共同', '主办', '举办', '全国性', '大学生', '竞赛', '活动']):
+                    continue
+                if any(tok in unit for tok in ['各级', '各类', '（', '）', '(', ')']):
+                    continue
+                if len(unit) > 30:
+                    continue
+                if unit.startswith('由'):
+                    unit = unit[1:].strip()
+                # 联合主办常见机构关键词
+                if any(k in unit for k in ['中央', '教育部', '教育厅', '学联', '联合会', '科协', '科学技术协会', '共青团', '省委', '委员会', '团委', '学院', '大学', '学校', '部门', '处', '中心', '协会']):
+                    if unit not in units:
+                        units.append(unit)
+            if len(units) >= 2:
+                return '、'.join(units)
+        return ""
+
+    def _fallback_organizer_by_context(self, contest: dict) -> str:
+        """
+        当正文规则无法可靠提取组织方时，按学院/部门上下文兜底。
+        优先级：spider/source -> URL 域名 -> publisher。
+        """
+        source = (contest.get("source") or contest.get("spider_name") or "").strip().lower()
+        url = (contest.get("notice_url") or contest.get("url") or "").strip().lower()
+        publisher = (contest.get("publisher") or "").strip()
+
+        source_map = {
+            "hbue_lyxy_notice_spider": "旅游与酒店管理学院",
+            "hbue_tsxy_notice_spider": "统计与数学学院",
+            "hbue_gsxy_notice_spider": "工商管理学院",
+            "hbue_jwc_notice_spider": "教务处",
+            "hbue_ysxy_notice_spider": "艺术设计学院",
+            "hbue_jmxy_notice_spider": "经济与贸易学院",
+            "hbue_jrxy_notice_spider": "金融学院",
+            "hbue_kjxy_notice_spider": "会计学院",
+            "hbue_ie_notice_spider": "信息工程学院",
+            "hbue_xgc_notice_spider": "学生工作处",
+            "hbue_xgxy_notice_spider": "信息管理学院",
+            "hbue_tw_notice_spider": "校团委",
+            "hbue_etc_notice_spider": "实验教学中心",
+        }
+        host_map = {
+            "lyxy.hbue.edu.cn": "旅游与酒店管理学院",
+            "tsxy.hbue.edu.cn": "统计与数学学院",
+            "gsxy.hbue.edu.cn": "工商管理学院",
+            "jwc.hbue.edu.cn": "教务处",
+            "ysxy.hbue.edu.cn": "艺术设计学院",
+            "jmxy.hbue.edu.cn": "经济与贸易学院",
+            "jrxy.hbue.edu.cn": "金融学院",
+            "kjxy.hbue.edu.cn": "会计学院",
+            "ie.hbue.edu.cn": "信息工程学院",
+            "xgc.hbue.edu.cn": "学生工作处",
+            "xgxy.hbue.edu.cn": "信息管理学院",
+            "tw.hbue.edu.cn": "校团委",
+            "etc.hbue.edu.cn": "实验教学中心",
+            "wyxy.hbue.edu.cn": "外国语学院",
+            "xwcb.hbue.edu.cn": "新闻与传播学院",
+        }
+        for host, org in host_map.items():
+            if host in url:
+                return org
+
+        if source in source_map:
+            return source_map[source]
+
+        if publisher and self._is_valid_organizer(publisher):
+            return publisher
+
+
+
+    def _looks_like_sentence_fragment(self, text: str) -> bool:
+        """判断组织方候选是否更像叙述性句子片段。"""
+        if not text:
+            return True
+        value = text.strip()
+        fragment_markers = [
+            "基于", "完善与", "展示了", "旨在", "激发", "提高", "每年", "同时也",
+            "普通高等学校", "全日制在校", "以二级", "和众多", "入选",
+            "挑战杯", "AI大学",
+            "各类大学",
+        ]
+        if any(m in value for m in fragment_markers):
+            return True
+        # 过长且包含多个功能词，通常不是机构名
+        if len(value) >= 12 and sum(tok in value for tok in ["的", "和", "与", "在", "为"]) >= 2:
+            return True
+        # 仅以“大学”结尾但前缀不是明确校名时，误截概率高
+        if value.endswith("大学") and len(value) > 6 and not any(k in value for k in ["清华", "北京", "武汉", "湖北", "经济学院"]):
+            return True
+        if value in {"中国大学", "中国国际大学"}:
+            return True
+        if value in {"团委、研究生会", "团委和研究生会", "研究生会、团委"}:
+            return True
+        return False
+
+    def _is_joint_organizer_candidate(self, text: str) -> bool:
+        """联合主办候选值校验：用于避免被学院兜底覆盖。"""
+        if not text or "、" not in text:
+            return False
+        value = self._remove_trailing_punct(text)
+        if len(value) > 120:
+            return False
+        parts = [p.strip() for p in re.split(r"[、]", value) if p.strip()]
+        if len(parts) < 2:
+            return False
+        org_markers = ["委", "厅", "部", "会", "院", "校", "中心", "协会", "联合会", "学联", "科协", "团"]
+        valid_parts = 0
+        for part in parts:
+            if len(part) < 2 or len(part) > 30:
+                continue
+            if any(m in part for m in org_markers):
+                valid_parts += 1
+        return valid_parts >= 2
+
+    def parse_organizer(self, text: str) -> str:
+        """
+        解析承办方（organizer）
+        
+        规则：
+        1. 关键词匹配：承办|主办|承办单位|主办单位|负责单位|组织单位
+        2. 无关键词时：匹配学院|中心|组委会|协会|部门等机构名
+        3. 兜底：null
+        """
+        clean_text = self._clean_candidate_block(text)
+
+        # 专项纠偏：中国商业统计学会（含历史乱码文本）
+        business_stats_aliases = [
+            "中国商业统计学会",
+            "中国商业统计",
+            "�й���ҵͳ��ѧ��",  # 历史库常见乱码片段
+            "ҵͳ��ѧ��",        # 历史库常见乱码片段
+        ]
+        if any(alias in clean_text for alias in business_stats_aliases):
+            return "中国商业统计学会"
+
+        # 专项纠偏：中国物流与采购联合会（含赛事官网特征）
+        logistics_union_aliases = [
+            "中国物流与采购联合会",
+            "物流与采购联合会",
+            "clppx.org.cn",
+        ]
+        if any(alias in clean_text for alias in logistics_union_aliases):
+            return "中国物流与采购联合会"
+
+        # 专项纠偏：中国教育国际交流协会 + 中国高等教育学会（联合发起并主办）
+        if (
+            "中国教育国际交流协会" in clean_text
+            and "中国高等教育学会" in clean_text
+            and ("联合发起并主办" in clean_text or "联合主办" in clean_text)
+        ):
+            return "中国教育国际交流协会、中国高等教育学会"
+
+        # 专项纠偏：常见赛事/校内主办机构
+        if "中国电子视像行业协会" in clean_text:
+            return "中国电子视像行业协会"
+        if "教育部高校电子商务类专业教学指导委员会" in clean_text:
+            return "教育部高校电子商务类专业教学指导委员会"
+        if "教育部等12个中央部委和地方省级人民政府" in clean_text:
+            return "教育部等12个中央部委和地方省级人民政府"
+        if "会计学院研究生会" in clean_text:
+            return "会计学院研究生会"
+        if "教务处" in clean_text and "关于编制" in clean_text:
+            return "教务处"
+
+        # 专项纠偏：中国人工智能学会（含赛事官网特征）
+        caai_aliases = [
+            "中国人工智能学会",
+            "mit.caai.cn",
+        ]
+        if any(alias in clean_text for alias in caai_aliases):
+            if "与竞赛组委会联合主办" in clean_text or "与竞赛组委会联合发起并主办" in clean_text:
+                return "中国人工智能学会、竞赛组委会"
+            return "中国人工智能学会"
+
+        # 专项纠偏：大学生就业指导中心
+        job_center_aliases = [
+            "大学生就业指导中心",
+            "就业指导中心",
+        ]
+        if any(alias in clean_text for alias in job_center_aliases):
+            return "大学生就业指导中心"
+
+        # 专项纠偏：实验教学中心（含历史乱码文本）
+        lab_center_aliases = [
+            "实验教学中心",
+            "实验教学",
+            "ʵ���ѧ",          # 历史库中“实验教学”常见乱码片段
+            "ʵ���ѧ����",      # 历史库中“实验教学中心”常见乱码片段
+        ]
+        if any(alias in clean_text for alias in lab_center_aliases):
+            return "实验教学中心"
+        
+        # 优先处理联合主办表达：由A、B、C和D共同主办
+        joint_hosts = self._extract_joint_hosts(clean_text)
+        if joint_hosts:
+            return joint_hosts
+        
+        # 优先匹配“XX单位主办/承办/协办”前置结构
+        pre_unit_pattern = (
+            r'([\u4e00-\u9fa5A-Za-z]{2,30}'
+            r'(?:湖北经济学院|学院|大学|学校|系|部|处|中心|部门|组委会|协会|委员会|团委|研究生会|学生会))'
+            r'\s*(?:主办|承办|协办)'
+        )
+        pre_match = re.search(pre_unit_pattern, clean_text)
+        if pre_match:
+            unit = self._normalize_organizer(pre_match.group(1))
+            if self._is_valid_organizer(unit):
+                return unit
+        
+        # 优先从主办/承办字段直接抓取
+        keyword_patterns = [
+            r'(?:主办单位|主办方|主办)[:：]?\s*([^。；;\n]{2,80})',
+            r'(?:承办单位|承办方|承办)[:：]?\s*([^。；;\n]{2,80})',
+            r'(?:组织单位|负责单位|协办单位|协办方|协办|指导单位)[:：]?\s*([^。；;\n]{2,80})',
+        ]
+        stop_pattern = r'(?:[。；;\n]|(?:\s*[一二三四五六七八九十]+\s*、)|参与对象|参赛对象|竞赛对象|奖励对象|参赛资格|报名条件|奖项设置|联系方式|报名方式)'
+        
+        for pattern in keyword_patterns:
+            m = re.search(pattern, clean_text)
+            if not m:
+                continue
+            block = re.split(stop_pattern, m.group(1))[0].strip()
+            # 截断说明性并列枚举尾巴
+            block = re.split(r'，\s*(?:则|并|或|以及|且)|，\s*其中|，\s*并由', block)[0].strip()
+            block = self._normalize_organizer(block)
+            unit = self._pick_core_unit(block) or block
+            if self._is_valid_organizer(unit):
+                return unit
+        
+        # 无关键词时，直接从文本中抽核心单位名（用于“XX学院在第十届...”）
+        fallback = self._pick_core_unit(clean_text)
+        if fallback and self._is_valid_organizer(fallback):
+            return fallback
+        
+        return "null"
+
+    def _strip_participant_clause_ordinals(self, value: str) -> str:
+        """
+        去掉参赛对象串里的中文条款序号，如（一）（五）、(二) 等。
+        正文中常见「（一）xxx；（二）yyy」并列说明，展示时去掉序号更干净。
+        """
+        if not isinstance(value, str):
+            return value
+        s = value.strip()
+        if not s:
+            return value
+        # 全角括号 + 中文数字/阿拉伯数字 + 全角闭括号
+        s = re.sub(r"（[一二三四五六七八九十0-9]{1,4}）\s*", "", s)
+        # 半角括号形式
+        s = re.sub(r"\(\s*[一二三四五六七八九十0-9]{1,4}\s*\)\s*", "", s)
+        return s.strip()
+
+    def parse_participants(self, text: str) -> str:
+        """
+        解析参与对象（participant）
+
+        规则：
+        1. 直接从正文提取“参与对象”相关原句
+        2. 若无法准确提取，兜底“全体学生”
+        """
+        direct = self._extract_participants_direct_sentence(text)
+        if not direct:
+            return "全体学生"
+        cleaned = self._strip_participant_clause_ordinals(direct)
+        if not cleaned:
+            return "全体学生"
+        # 「（一）参赛资格。各有关…」去序号后易残留「参赛资格。」；「参赛资格：xxx」单行叠字
+        cleaned = re.sub(r"^(?:参赛资格|报名条件)\s*[。．]\s*", "", cleaned).strip()
+        cleaned = re.sub(r"^(?:参赛资格|报名条件)\s*[:：]\s*", "", cleaned).strip()
+        return cleaned if cleaned else "全体学生"
+
+    def _extract_participants_direct_sentence(self, text: str) -> str:
+        """从正文中提取参与对象原句。"""
+        if not text:
+            return ""
+        norm = text.replace('\r\n', '\n').replace('\r', '\n')
+        lines = [ln.strip() for ln in norm.split('\n') if ln.strip()]
+        if not lines:
+            return ""
+
+        sentence_hints = [
+            '参赛对象', '参与对象', '活动对象', '竞赛对象', '奖励对象', '参赛资格', '报名条件', '面向对象',
+            '报名对象', '参赛人员',
+            '参赛范围', '适用对象'
+        ]
+        group_hints = [
+            '全院学生', '全体学生', '全校学生', '全校师生',
+            '在校学生', '本科生', '研究生', '大一', '大二', '大三', '大四'
+        ]
+        noise_hints = ['研究生会', '学生会', '团委', '主办', '承办', '协办', '联系人', '联系方式']
+        # 不含「指导教师」：市调校赛等参赛对象段常写「每队…和1-3名指导教师组成」，属人群与组队条件，非材料审批流程
+        # 不含「审核」：「教务处」等常见词含子串「审核」，易误判
+        management_hints = ['填报', '申报', '评审']
+
+        def _valid_participant_candidate(s: str) -> bool:
+            ss = self._remove_trailing_punct(s.strip())
+            if not ss:
+                return False
+            if len(ss) < 2 or len(ss) > 220:
+                return False
+            if re.match(r'^\s*[一二三四五六七八九十0-9]+[、.．]\s*', ss):
+                return False
+            if re.fullmatch(
+                r'(?:参赛对象|参与对象|活动对象|竞赛对象|奖励对象|参赛资格|报名条件|面向对象|报名对象|参赛人员|参赛范围|适用对象)[:：]?',
+                ss,
+            ):
+                return False
+            if '对象和形式' in ss or '对象及形式' in ss or '报名和形式' in ss:
+                return False
+            if re.search(r'经[^。\n]{0,16}指导教师[^。\n]{0,12}签字', ss):
+                return False
+            if any(k in ss for k in management_hints):
+                return False
+            # 参与对象句至少包含人群关键词之一（含「在读生」「大二」等常见学籍表述）
+            if not re.search(
+                r'学生|本科|研究生|师生|在校|选手|参赛者|团队|在读生|在读|'
+                r'大一|大二|大三|大四|报名者|参赛|设计师|爱好者|专科生|进修生|教师',
+                ss,
+            ):
+                return False
+            return True
+
+        # 创新大赛等：正文「大赛面向我校…」常为真正参赛人群，优先于「二、参赛要求」下（四）参赛人员年龄等条款
+        m_face = re.search(r"大赛面向我校[^。\n]{8,140}", norm)
+        if m_face:
+            seg = self._remove_trailing_punct(m_face.group(0).strip())
+            if _valid_participant_candidate(seg):
+                return seg
+
+        # 校赛落幕、获奖名单等新闻体：首段「吸引全校…报名参赛。」为参与规模与覆盖面描述
+        m_attract = re.search(r"(吸引全校[^。\n]{8,120}报名参赛。)", norm)
+        if m_attract:
+            seg = m_attract.group(1).strip()
+            if _valid_participant_candidate(seg):
+                return seg
+
+        # 校赛落幕新闻体：校内多专业参与、报名人数、队伍数，直至「…晋级省赛。」（含本研队伍结构）
+        m_attract_campus = re.search(r"(吸引了校内[^。]+晋级省赛。)", norm)
+        if m_attract_campus:
+            seg = m_attract_campus.group(1).strip()
+            if _valid_participant_candidate(seg):
+                return seg
+
+        # 校赛战报体：「我校报名人数…网考通过…提交报告团队为××支。」（无「参赛对象」标题时描述参与规模）
+        m_campus_stats = re.search(r"(我校报名人数[^。]+支。)", norm)
+        if m_campus_stats:
+            seg = m_campus_stats.group(1).strip()
+            if _valid_participant_candidate(seg):
+                return seg
+
+        # 「参赛对象」等独占一行（冒号可有可无），说明在后续段：竞赛指南类（无「一、二、」小节编号）
+        for i, ln in enumerate(lines):
+            ls = ln.strip()
+            if not re.match(
+                r"^\s*(?:参赛对象|参与对象|活动对象|竞赛对象|报名对象|参赛要求)\s*[:：]?\s*$",
+                ls,
+            ):
+                continue
+            collected = []
+            for j in range(i + 1, min(len(lines), i + 45)):
+                row = lines[j].strip()
+                if not row:
+                    continue
+                if re.match(r"^(?:竞赛官网|竞赛网址|官方网站|赛事官网|报名网址|官网)[:：]?", row):
+                    break
+                if re.match(r"^https?://", row) or row.startswith("【文档"):
+                    break
+                if row.startswith(("竞赛内容", "参赛形式", "作品要求")):
+                    break
+                # 创新大赛等：「参赛要求」下「参赛资格」后为团队/导师条款，不宜并入 participants
+                if row.startswith(("团队要求", "指导教师", "赛程安排", "竞赛时间")):
+                    break
+                row2 = re.sub(r"^\s*\d+\s*[.．、]\s*", "", row).strip()
+                picked = ""
+                if _valid_participant_candidate(row2):
+                    picked = row2
+                elif _valid_participant_candidate(row):
+                    picked = row
+                if picked:
+                    collected.append(self._remove_trailing_punct(picked))
+            if collected:
+                joined = "；".join(collected)
+                if len(joined) > 520:
+                    joined = joined[:520].rstrip("；，、") + "…"
+                return joined
+
+        # 优先：定位“参赛对象”标题块，提取其后对象行
+        for i, ln in enumerate(lines):
+            is_num_heading = bool(
+                re.match(
+                    r'^\s*[一二三四五六七八九十0-9]+[、.．]\s*.*(?:参赛对象|参与对象|活动对象|竞赛对象|奖励对象|参赛资格|报名条件|面向对象|报名对象|参赛范围|适用对象)',
+                    ln,
+                )
+            )
+            m_paren_only = re.match(
+                r'^\s*[（(][一二三四五六七八九十]+[）)]\s*(?:参赛对象|参与对象|活动对象|竞赛对象|奖励对象|参赛资格|报名条件|面向对象|报名对象|参赛范围|适用对象)\s*$',
+                ln,
+            )
+            m_paren_inline = re.match(
+                r'^\s*[（(][一二三四五六七八九十]+[）)]\s*(?:参赛对象|参与对象|活动对象|竞赛对象|奖励对象|参赛资格|报名条件|面向对象|报名对象|参赛范围|适用对象)\s*(.+)$',
+                ln,
+            )
+            if not (is_num_heading or m_paren_only or m_paren_inline):
+                continue
+            collected = []
+            same_line_done = False
+            paren_heading_only = bool(m_paren_only)
+            from_paren_inline = False
+            # 「1、参赛对象：我校……」整行即含对象；冒号后若含「指导教师」等易被管理类规则误判，先试首句
+            m_same = re.search(
+                r"(?:参赛对象|参与对象|活动对象|竞赛对象|奖励对象|参赛资格|面向对象|报名对象|参赛范围|参赛人员|申报范围|参赛条件|报名条件|适用对象)\s*[:：]\s*(.+)$",
+                ln,
+            )
+            if not m_same and m_paren_inline:
+                tail = self._remove_trailing_punct(m_paren_inline.group(1).strip())
+                # 同一物理行内紧接「（二）…」时截断，避免 HTML 压行把后续流程并入参赛对象
+                tail = re.split(r"(?=[（(][二三四五六七八九十]+[）)])", tail)[0].strip()
+                if len(tail) > 200 and "；" in tail:
+                    tail = tail.split("；", 1)[0].strip()
+                elif len(tail) > 200 and "。" in tail:
+                    tail = tail.split("。", 1)[0].strip()
+
+                class _Inline:
+                    def __init__(self, t: str):
+                        self._t = t
+
+                    def group(self, n: int) -> str:
+                        return self._t if n == 1 else ""
+
+                m_same = _Inline(tail)
+                from_paren_inline = True
+            if m_same:
+                same_rest = self._remove_trailing_punct(m_same.group(1).strip())
+                same_candidates = [same_rest]
+                if "。" in same_rest:
+                    same_candidates.insert(0, same_rest.split("。", 1)[0].strip())
+                for cand in same_candidates:
+                    if _valid_participant_candidate(cand):
+                        collected.append(self._remove_trailing_punct(cand))
+                        # 仅当「阿拉伯数字条 + 参赛对象等」同段已取完时，后续「2、团队要求」类才截断
+                        if re.match(r"^\s*\d+\s*[、.．]\s*", ln) and re.search(
+                            r"(?:参赛对象|参与对象|活动对象|竞赛对象|奖励对象|参赛资格|面向对象|报名对象|参赛范围|参赛人员|申报范围|参赛条件|报名条件|适用对象)",
+                            ln,
+                        ):
+                            same_line_done = True
+                        break
+            # 「（一）参赛对象…」与正文同一行且已取完时，不再向下合并（二）流程段
+            if not (from_paren_inline and collected):
+                for j in range(i + 1, min(len(lines), i + 12)):
+                    row = lines[j].strip()
+                    if not row:
+                        continue
+                    # 「（一）参赛对象」标题行后已取正文，遇「（二）报名…」等同卷编号则停止（与「（一）（二）」并列参赛说明区分）
+                    if (
+                        paren_heading_only
+                        and collected
+                        and re.match(r"^\s*[（(][二三四五六七八九十]+[）)]", row)
+                    ):
+                        break
+                    # 已取「（一）参赛资格…」等后，遇「（二）组别…」等同卷分项停止（不含「（一）」以免误截首条分项）
+                    if collected and re.match(r'^\s*[（(][二三四五六七八九十]+[）)]', row):
+                        break
+                    # 遇到下一中文章节标题停止
+                    if re.match(r'^\s*[一二三四五六七八九十]+[、.．]\s*', row):
+                        break
+                    # 「1、参赛对象：…」已取完时，遇到「2、团队要求」等同级阿拉伯编号则停止
+                    if same_line_done and re.match(r'^\s*\d+\s*[、.．]\s*', row):
+                        break
+                    # 「1.报名对象」下已取到对象段后，「2.报名方式」「3.竞赛方式」等转入流程说明，停止收集
+                    if collected and re.match(
+                        r'^\s*\d+\s*[.．、]\s*(?:报名方式|竞赛方式|参赛形式|作品提交|竞赛时间|缴费|联系|赛程|结果公布)',
+                        row,
+                    ):
+                        break
+                    # 注2、参赛费等说明并入 participants 价值低，且易拉长字段
+                    if re.match(r"^\s*注\s*2\s*[：:]", row) or re.search(
+                        r"参赛报名(?:费|费)|网考费.*元/人|代为转收", row
+                    ):
+                        break
+                    # 备赛通知中参赛方式段落结束后常接「3、提倡…」或新赛事标题行（勿匹配「三创赛：」小节标题）
+                    if re.match(r"^\s*3\s*[、.．]\s*提倡", row) or re.match(
+                        r"^中国国际大学生创新大赛[:：]", row
+                    ):
+                        break
+                    # 常见对象行：1.xxx；2.xxx
+                    row2 = re.sub(r'^\s*\d+\s*[.．、]\s*', '', row).strip()
+                    # 「（二）报名要求…」起为要求/能力说明（全角括号），市调大赛等不再并入 participants
+                    if re.search(r"^（[二三四五六七八九十]+）\s*报名要求", row):
+                        break
+                    if _valid_participant_candidate(row2):
+                        collected.append(self._remove_trailing_punct(row2))
+            if collected:
+                joined_c = "；".join(collected)
+                # 市调大赛类：「（一）报名对象」段后另起「注1」常为对象补充说明
+                if (
+                    "统计与数学学院组织本校报名工作" in joined_c
+                    and "注1" not in joined_c
+                ):
+                    for ln2 in lines[i + 1 : min(len(lines), i + 35)]:
+                        s2 = ln2.strip()
+                        if re.match(r"^\s*注\s*2\s*[：:]", s2):
+                            break
+                        if re.match(r"^\s*注\s*1\s*[：:]", s2):
+                            zz = self._remove_trailing_punct(s2)
+                            if _valid_participant_candidate(zz):
+                                collected.append(zz)
+                            break
+                return "；".join(collected)
+
+        # 先提取明确短语
+        for k in ['全院学生', '全体学生', '全校学生', '全校师生']:
+            if k in norm:
+                return k
+
+        # 先按行匹配，优先标签后内容，避免抓整段
+        for ln in lines:
+            if len(ln) < 3:
+                continue
+            # 跳过章节标题行（如“三、参赛对象和形式”）
+            if re.match(r'^\s*[一二三四五六七八九十0-9]+[、.．]\s*', ln):
+                if any(k in ln for k in sentence_hints):
+                    continue
+            if any(k in ln for k in sentence_hints):
+                # 参赛对象：xxx
+                m = re.search(
+                    r'(?:参赛对象|参与对象|活动对象|竞赛对象|奖励对象|参赛资格|面向对象|报名对象|参赛人员|参赛范围|申报范围|参赛条件|报名条件|适用对象)\s*[:：]\s*(.+)$',
+                    ln,
+                )
+                if m:
+                    right = self._remove_trailing_punct(m.group(1).strip())
+                    if _valid_participant_candidate(right):
+                        return right
+                # 标签行但无内容，跳过
+                if re.fullmatch(
+                    r'.*(?:参赛对象|参与对象|活动对象|竞赛对象|奖励对象|参赛资格|面向对象|报名对象|参赛人员|参赛范围|申报范围|参赛条件|报名条件|适用对象)\s*[:：]?\s*',
+                    ln,
+                ):
+                    continue
+                if re.search(r'对象和形式|对象及形式|报名和形式', ln):
+                    continue
+                if len(ln) <= 80 and _valid_participant_candidate(ln):
+                    return self._remove_trailing_punct(ln)
+
+        # 再按句子匹配包含对象关键词的原句（限制长度）
+        joined = "\n".join(lines)
+        sentences = [s.strip() for s in re.split(r'(?<=[。！？；\n])\s*', joined) if s.strip()]
+        for sent in sentences:
+            if len(sent) < 4:
+                continue
+            if len(sent) > 100:
+                continue
+            if not _valid_participant_candidate(sent):
+                continue
+            # 句子级匹配必须含对象标签，或为明确“全体/全院/全校”短语
+            has_obj_label = any(
+                k in sent
+                for k in [
+                    '参赛对象',
+                    '参与对象',
+                    '活动对象',
+                    '竞赛对象',
+                    '奖励对象',
+                    '参赛资格',
+                    '报名条件',
+                    '面向对象',
+                    '报名对象',
+                    '参赛人员',
+                    '参赛范围',
+                    '适用对象',
+                    '面向',
+                ]
+            )
+            has_explicit_group = any(k in sent for k in ['全院学生', '全体学生', '全校学生', '全校师生'])
+            if not (has_obj_label or has_explicit_group):
+                continue
+            if any(k in sent for k in group_hints):
+                # 避免“研究生会主办”这类组织信息误判
+                if any(n in sent for n in noise_hints) and not any(k in sent for k in ['全院学生', '全体学生', '全校学生', '全校师生']):
+                    continue
+                return self._remove_trailing_punct(sent) + ("。" if not re.search(r'[。！？；]$', sent) else "")
+
+        return ""
+
+    def _extract_prize_components(self, text: str) -> dict:
+        """提取是否设奖、奖项等级与数量、获奖名单"""
+        clean_text = self._clean_text(text)
+        pruned_text = re.sub(r'按大赛组委会的奖项设置规则[^。；;\n]*', '', clean_text)
+        pruned_text = re.sub(r'证书（?奖金）?', '', pruned_text)
+        # 为“获奖名单”保留行/列表格结构（不压平换行）
+        structured_text = text.replace('\r\n', '\n').replace('\r', '\n')
+        structured_pruned_text = re.sub(r'按大赛组委会的奖项设置规则[^。；;\n]*', '', structured_text)
+        structured_pruned_text = re.sub(r'证书（?奖金）?', '', structured_pruned_text)
+        
+        level_order = ['特等奖', '一等奖', '二等奖', '三等奖', '优秀奖']
+        found_levels = []
+        count_values = []
+        
+        for level in level_order:
+            if level in pruned_text and level not in found_levels:
+                found_levels.append(level)
+            
+            for m in re.findall(rf'(\\d+)\\s*项?\\s*{level}', pruned_text):
+                count_values.append(m)
+            for m in re.findall(rf'{level}\\s*(\\d+)\\s*项?', pruned_text):
+                count_values.append(m)
+            for m in re.findall(rf'{level}\\s*(\\d+)\\s*人', pruned_text):
+                count_values.append(m)
+
+        # 兼容体育/活动类表达：冠亚季军
+        if re.search(r'冠亚季军|冠军、亚军、季军|冠军亚军季军', pruned_text):
+            for level in ['冠军', '亚军', '季军']:
+                if level not in found_levels:
+                    found_levels.append(level)
+        else:
+            for level in ['冠军', '亚军', '季军']:
+                if re.search(level, pruned_text) and level not in found_levels:
+                    found_levels.append(level)
+        
+        # 提取获奖名单（示例：一等奖：陈xx、李xx）
+        recipients = []
+
+        def _is_name_like(token: str) -> bool:
+            """仅保留看起来像姓名/团队名的短词，避免正文噪声。"""
+            t = token.strip()
+            if not t:
+                return False
+            if len(t) > 8:
+                return False
+            if any(k in t for k in [
+                '获奖', '名单', '通知', '附件', '详情', '规则', '设置', '证书', '奖金',
+                '同学', '同学们', '团队', '组委会', '比赛', '大赛', '学院', '学校', '大学',
+                '一等奖', '二等奖', '三等奖', '优秀奖', '特等奖'
+            ]):
+                return False
+            # 常见人名：2-4位中文，允许中间点（少数民族姓名）
+            if re.fullmatch(r'[\u4e00-\u9fa5]{2,4}', t) or re.fullmatch(r'[\u4e00-\u9fa5]{1,3}·[\u4e00-\u9fa5]{1,3}', t):
+                return True
+            return False
+
+        recipient_patterns = [
+            r'(?:特等奖|一等奖|二等奖|三等奖|优秀奖)[:：]\s*([^。；;\n]+)',
+            r'(?:获奖名单|获奖人员|获奖同学)[:：]\s*([^。；;\n]+)',
+        ]
+        for pattern in recipient_patterns:
+            for seg in re.findall(pattern, structured_pruned_text):
+                seg = seg.strip()
+                if not seg or len(seg) > 80:
+                    continue
+                for name in re.split(r'[、,，/；;]', seg):
+                    nm = name.strip()
+                    if _is_name_like(nm) and nm not in recipients:
+                        recipients.append(nm)
+
+        # 结构化名单区块：仅在“获奖名单/获奖人员”标题后连续短行中提取姓名
+        block_match = re.search(
+            r'(?:^|\n)\s*(?:获奖名单|获奖人员|获奖同学)\s*[:：]?\s*\n(?P<body>(?:[^\n]{1,40}\n?){1,12})',
+            pruned_text
+        )
+        if block_match:
+            body = block_match.group('body')
+            for ln in body.splitlines():
+                line = ln.strip()
+                if not line:
+                    continue
+                # 遇到疑似新章节标题则停止
+                if re.search(r'(?:参赛|报名|时间|地点|要求|说明|联系方式|主办|承办|附件)', line):
+                    break
+                for piece in re.split(r'[\s、,，/；;|]+', line):
+                    nm = piece.strip()
+                    if _is_name_like(nm) and nm not in recipients:
+                        recipients.append(nm)
+
+        # 表格型名单：如“团队名称\t指导老师\t团队成员\t作品名称\t奖项”
+        # 仅在名单标题后且存在“奖项”表头时启用，避免误提取普通正文。
+        lines = structured_pruned_text.splitlines()
+        for i, raw in enumerate(lines):
+            line = raw.strip()
+            if '获奖名单' not in line and '获奖人员' not in line:
+                continue
+            window = lines[i + 1:i + 40]
+            if not window:
+                continue
+            header_idx = -1
+            for j, w in enumerate(window):
+                hw = w.strip()
+                if ('奖项' in hw) and ('\t' in hw or '|' in hw):
+                    header_idx = j
+                    break
+            if header_idx < 0:
+                continue
+
+            header_cols = re.split(r'[\t|]+', window[header_idx].strip())
+            member_col = None
+            for idx, col in enumerate(header_cols):
+                c = col.strip()
+                if any(k in c for k in ['团队成员', '成员', '姓名', '队员']):
+                    member_col = idx
+                    break
+
+            for row in window[header_idx + 1:]:
+                rr = row.strip()
+                if not rr:
+                    continue
+                if re.search(r'(?:参赛|报名|时间|地点|要求|说明|联系方式|主办|承办|附件)', rr):
+                    break
+                if '\t' not in rr and '|' not in rr:
+                    # 连续非表格行视为表格结束
+                    if len(rr) > 18:
+                        break
+                    continue
+
+                cols = [c.strip() for c in re.split(r'[\t|]+', rr)]
+                if not any(lv in rr for lv in ['特等奖', '一等奖', '二等奖', '三等奖', '优秀奖']):
+                    continue
+
+                candidate_cells = []
+                if member_col is not None and member_col < len(cols):
+                    candidate_cells.append(cols[member_col])
+                elif cols:
+                    candidate_cells.append(cols[0])  # 兼容无成员列时用首列
+
+                for cell in candidate_cells:
+                    for piece in re.split(r'[、,，/；;\s]+', cell):
+                        nm = piece.strip()
+                        if _is_name_like(nm) and nm not in recipients:
+                            recipients.append(nm)
+            break
+        
+        has_award = 1 if found_levels else 0
+
+        # 奖项数量：等级个数（如 一/二/三等奖 共 3 个等级）
+        award_item_count = str(len(found_levels)) if found_levels else "null"
+
+        # 获奖人数：文本中显式“xx人/xx名”
+        winner_counts = []
+        for w in re.findall(r'(\d+)\s*(?:人|名)', pruned_text):
+            if w not in winner_counts:
+                winner_counts.append(w)
+        winner_count = ",".join(winner_counts[:8]) if winner_counts else "null"
+
+        # 提取获奖比例（如：前20%、5%）
+        ratio_values = []
+        for ratio in re.findall(r'(\d{1,2}(?:\.\d+)?%)', pruned_text):
+            if ratio not in ratio_values:
+                ratio_values.append(ratio)
+
+        # 提取奖金信息（如：奖金500元、1000元、￥500）
+        bonus_values = []
+        # 仅在“奖项语境”中提取金额，避免把报名费/缴费误判为奖金
+        bonus_patterns = [
+            r'(?:总奖金|奖金|奖励|奖学金|奖金额)[:：]?\s*([￥¥]?\s*\d+(?:\.\d+)?\s*(?:元|万元|万|块|人民币)?)',
+            r'(?:一等奖|二等奖|三等奖|特等奖|优秀奖)[^。；;\n]{0,20}?([￥¥]?\s*\d+(?:\.\d+)?\s*(?:元|万元|万|块|人民币))',
+        ]
+        for pattern in bonus_patterns:
+            for m in re.finditer(pattern, pruned_text):
+                b = m.group(1)
+                bv = re.sub(r'\s+', '', b).strip()
+                if not bv:
+                    continue
+                ctx = pruned_text[max(0, m.start() - 18):min(len(pruned_text), m.end() + 18)]
+                # 排除报名/缴费/收费/组织费等非奖金额语境
+                if re.search(r'报名费|参赛费|收费|缴费|费用|组织费|服务费|每个作品收|每件作品收|每份收|取费', ctx):
+                    continue
+                if bv not in bonus_values:
+                    bonus_values.append(bv)
+        # 清理无单位的纯数字“奖金”噪声（如误提取的“5”）
+        bonus_values = [b for b in bonus_values if not re.fullmatch(r'\d{1,3}', b)]
+
+        # 证书信息
+        certificate_values = []
+        if re.search(r'荣誉证书|获奖证书|证书|电子证书|纸质证书', pruned_text):
+            certificate_values.append('证书')
+        if re.search(r'一等奖证书|二等奖证书|三等奖证书', pruned_text):
+            certificate_values.append('分级证书')
+
+        # 奖品信息
+        gift_values = []
+        gift_patterns = [
+            r'(?:奖品|奖项奖品|奖品设置)[:：]?\s*([^。；;\n]{2,80})',
+            r'((?:礼品|实物奖|纪念品)[^。；;\n]{0,40})',
+            r'(?:颁发|发放|奖励)[^。；;\n]{0,20}奖品',
+            r'[^。；;\n]{0,30}及奖品',
+        ]
+        for pattern in gift_patterns:
+            for g in re.findall(pattern, pruned_text):
+                gv = self._remove_trailing_punct(g)
+                if not gv:
+                    continue
+                if '奖品' in gv and gv != '奖品':
+                    gv = '奖品'
+                if gv not in gift_values:
+                    gift_values.append(gv)
+
+        # 综测/学分信息
+        credit_values = []
+        credit_patterns = [
+            r'(综测[^，。；;\n]{0,20})',
+            r'(学分[^，。；;\n]{0,20})',
+            r'(加分[^，。；;\n]{0,20})',
+            r'(素质分[^，。；;\n]{0,20})',
+        ]
+        for pattern in credit_patterns:
+            for c in re.findall(pattern, pruned_text):
+                cv = self._remove_trailing_punct(c)
+                if not cv:
+                    continue
+                if cv not in credit_values:
+                    credit_values.append(cv)
+
+        return {
+            "has_award": str(has_award),
+            "award_level": ",".join(found_levels) if found_levels else "null",
+            "award_count": ",".join(count_values) if count_values else "null",
+            "award_recipient": ",".join(recipients) if recipients else "null",
+            "award_item_count": award_item_count,
+            "winner_count": winner_count,
+            "award_ratio": ",".join(ratio_values[:5]) if ratio_values else "null",
+            "award_bonus": ",".join(bonus_values[:5]) if bonus_values else "null",
+            "award_certificate": ",".join(certificate_values) if certificate_values else "null",
+            "award_gift": ",".join(gift_values[:5]) if gift_values else "null",
+            "award_credit": ",".join(credit_values[:5]) if credit_values else "null",
+        }
+    
+    def parse_prize(self, text: str) -> str:
+        """
+        解析奖项设置（prize）
+
+        优先返回高保真原文块：分等级名单、获奖表格、「奖项介绍」等标题段；
+        否则用自然中文串联抽取信息，不强制「奖项等级:;奖项数量:」等固定字段格式。
+        无有效信息时返回 null。
+        """
+        info = self._extract_prize_components(text)
+
+        # 若正文存在“分等级获奖名单（一等奖/二等奖/三等奖/优秀奖）”原文块，优先返回该块
+        level_list_text = self._extract_award_level_list_block(text)
+        if level_list_text:
+            return level_list_text
+
+        # 若正文包含“获奖名单”表格，优先返回表格原文（保留行/列顺序）
+        award_table_text = self._extract_award_table_block(text)
+        if award_table_text:
+            return award_table_text
+
+        # 若正文存在“奖项介绍/奖项设置”等显式标题，优先提取该标题整段内容
+        # 同时补充“获奖名单”字段，避免遗漏名单信息
+        section_text = self._extract_prize_section_block(text)
+        if section_text:
+            if info.get("award_recipient") and info["award_recipient"] != "null":
+                rp = info["award_recipient"]
+                if rp not in section_text:
+                    return f"{section_text}；{rp}"
+            return section_text
+
+        # 直接从正文抓取“奖项设置/获奖比例”原句，避免被摘要化
+        direct_snippet = self._extract_prize_direct_snippet(text)
+        if direct_snippet:
+            return direct_snippet
+
+        # 设奖=0 时，不输出奖项细项，直接按空信息处理
+        if info.get("has_award") == "0":
+            return "null"
+        # 兜底：不强制「字段名:值」格式，用自然中文串联已抽取信息
+        natural = self._format_prize_natural_fallback(info)
+        return natural if natural else "null"
+
+    def _format_prize_natural_fallback(self, info: dict) -> str:
+        """将 prize 组件格式化为可读中文，避免固定「奖项等级:;奖项数量:」等模板。"""
+        pieces = []
+
+        def _norm_list(s: str) -> str:
+            return s.replace(",", "、").replace("，", "、").strip()
+
+        al = info.get("award_level") or ""
+        if al and al != "null":
+            pieces.append(_norm_list(al))
+
+        aic = info.get("award_item_count") or ""
+        if aic and aic != "null":
+            n_lv = len([x for x in re.split(r"[、,，]", al) if x.strip()]) if al and al != "null" else 0
+            try:
+                n_ic = int(str(aic).split(",")[0].strip())
+            except ValueError:
+                n_ic = -1
+            if n_ic < 0 or n_lv == 0 or n_ic != n_lv:
+                pieces.append(f"共{aic}档")
+
+        wc = info.get("winner_count") or ""
+        if wc and wc != "null":
+            pieces.append(f"人数相关 {_norm_list(wc)}")
+
+        ac = info.get("award_count") or ""
+        if ac and ac != "null":
+            pieces.append(f"名额 {_norm_list(ac)}")
+
+        ar = info.get("award_ratio") or ""
+        if ar and ar != "null":
+            pieces.append(_norm_list(ar))
+
+        ab = info.get("award_bonus") or ""
+        if ab and ab != "null":
+            pieces.append(f"奖金 {_norm_list(ab)}")
+
+        cert = info.get("award_certificate") or ""
+        if cert and cert != "null":
+            pieces.append(_norm_list(cert))
+
+        gift = info.get("award_gift") or ""
+        if gift and gift != "null":
+            pieces.append(_norm_list(gift))
+
+        cred = info.get("award_credit") or ""
+        if cred and cred != "null":
+            pieces.append(_norm_list(cred))
+
+        rec = info.get("award_recipient") or ""
+        if rec and rec != "null":
+            pieces.append(_norm_list(rec))
+
+        return "；".join(pieces) if pieces else ""
+
+    def _extract_prize_direct_snippet(self, text: str) -> str:
+        """
+        从正文提取奖项相关原句（非分条/非表格场景）。
+        优先命中“设置...奖项 + 获奖比例”这类句子。
+        """
+        if not text:
+            return ""
+        t = text.replace('\r\n', '\n').replace('\r', '\n')
+        t = re.sub(r'\s+', ' ', t).strip()
+        if not t:
+            return ""
+
+        patterns = [
+            r'((?:校赛|比赛|本次|本赛|赛事|活动)?设置[^。]{0,220}?(?:特等奖|一等奖|二等奖|三等奖|优秀奖)[^。]{0,260}?获奖比例[^。]{0,260}?。)',
+            r'((?:校赛|比赛|本次|本赛|赛事|活动)?设置[^。]{0,220}?(?:特等奖|一等奖|二等奖|三等奖|优秀奖)[^。]{0,260}?。)',
+            r'((?:校赛|校赛决赛|决赛|比赛|本次|本赛|赛事|活动)?设[^。]{0,260}?(?:一等奖|二等奖|三等奖|优秀指导(?:老|教)师奖)[^。]{0,260}?等奖项。)',
         ]
         for pat in patterns:
-            m = re.search(pat, text, re.I)
+            m = re.search(pat, t)
+            if not m:
+                continue
+            seg = self._remove_trailing_punct(m.group(1).strip())
+            if not seg:
+                continue
+            if len(seg) < 12:
+                continue
+            # 排除明显非奖项设置句
+            if re.search(r'联系人|报名|时间|地点|附件|缴费|收费', seg):
+                continue
+            result = seg + "。"
+            # 若后续紧邻句定义“优秀指导老师/指导教师”，一并保留
+            tail = t[m.end():]
+            m2 = re.match(r'^\s*([^。]{0,120}(?:优秀指导(?:老|教)师)[^。]{0,160})。', tail)
+            if m2:
+                extra = self._remove_trailing_punct(m2.group(1).strip())
+                if extra and extra not in result:
+                    result = f"{result}{extra}。"
+            return result
+        return ""
+
+    def _extract_award_level_list_block(self, text: str) -> str:
+        """提取“一等奖：xx； 二等奖：xx； ...”这类分等级名单原文块。"""
+        if not text:
+            return ""
+        lines = [ln.strip() for ln in text.replace('\r\n', '\n').replace('\r', '\n').split('\n')]
+        if not lines:
+            return ""
+
+        level_line_re = re.compile(r'^(特等奖|一等奖|二等奖|三等奖|优秀奖)\s*[：:]\s*(.+)$')
+        idx = 0
+        while idx < len(lines):
+            m = level_line_re.match(lines[idx])
+            if not m:
+                idx += 1
+                continue
+
+            collected = []
+            j = idx
+            while j < len(lines):
+                mm = level_line_re.match(lines[j])
+                if not mm:
+                    break
+                level = mm.group(1).strip()
+                names = self._remove_trailing_punct(mm.group(2).strip())
+                if not names or len(names) > 120:
+                    break
+                # 避免误把叙述句当名单
+                if re.search(r'通知|如下|评选|现场|证书|老师|同学|学院|活动|比赛|大赛', names):
+                    break
+                collected.append((level, names))
+                j += 1
+                # 允许空行穿插
+                while j < len(lines) and not lines[j]:
+                    j += 1
+
+            # 至少2行等级信息才认为是名单块
+            if len(collected) >= 2:
+                out = []
+                for k, (level, names) in enumerate(collected):
+                    tail = "；" if k < len(collected) - 1 else "。"
+                    out.append(f"{level}：{names}{tail}")
+                return "\n\n".join(out)
+            idx += 1
+        return ""
+
+    def _extract_award_table_block(self, text: str) -> str:
+        """提取获奖名单表格（如 团队名称/指导老师/团队成员/作品名称/奖项）。"""
+        if not text:
+            return ""
+        lines = [ln.rstrip() for ln in text.replace('\r\n', '\n').replace('\r', '\n').split('\n')]
+        if not lines:
+            return ""
+
+        header_idx = -1
+        award_heading_seen = False
+        # 更宽的名单表头关键词
+        name_keys = ['姓名', '成员', '队员', '获奖人', '获奖者', '选手']
+        work_keys = ['作品', '项目', '题目']
+        award_keys = ['奖项', '奖次', '奖级', '奖别', '获奖等级']
+        misc_keys = ['团队名称', '团队', '指导老师', '学院', '专业', '班级']
+
+        for i, raw in enumerate(lines):
+            ln = raw.strip()
+            if not ln:
+                continue
+            if ('获奖名单' in ln) or ('获奖人员' in ln) or ('获奖名单如下' in ln):
+                award_heading_seen = True
+
+            # 允许 tab 分列，也兼容多空格分列
+            if not ('\t' in raw or re.search(r'\s{2,}', raw)):
+                continue
+
+            cols = [c.strip() for c in re.split(r'[\t|]+|\s{2,}', ln) if c.strip()]
+            if len(cols) < 3:
+                continue
+
+            has_award_col = any(any(k in c for k in award_keys) for c in cols)
+            has_name_or_work_col = any(any(k in c for k in name_keys + work_keys) for c in cols)
+            has_misc_col = any(any(k in c for k in misc_keys) for c in cols)
+
+            # 需要满足：奖项列 + (姓名/作品列) +（看到名单标题或有常见附加列）
+            if has_award_col and has_name_or_work_col and (award_heading_seen or has_misc_col):
+                header_idx = i
+                break
+        if header_idx < 0:
+            return ""
+
+        rows = [lines[header_idx].strip()]
+        award_level_pattern = re.compile(r'(特等奖|一等奖|二等奖|三等奖|优秀奖)')
+        for raw in lines[header_idx + 1:]:
+            row = raw.strip()
+            if not row:
+                continue
+            # 遇到新章节或联系方式等则停止
+            if re.search(r'^(?:备注|说明|注[:：]|联系方式|联系人|报名|参赛|时间安排|附件)\b', row):
+                break
+            if not ('\t' in raw or re.search(r'\s{2,}', raw)):
+                # 连续出现非表格长句视为结束
+                if len(row) >= 18:
+                    break
+                continue
+            if not award_level_pattern.search(row):
+                continue
+            rows.append(row)
+
+        return "\n".join(rows).strip() if len(rows) > 1 else ""
+
+    def _extract_prize_section_block(self, text: str) -> str:
+        """提取“奖项介绍/奖项设置”等标题对应的整段内容。"""
+        if not text:
+            return ""
+        raw_lines = text.splitlines()
+        lines = [ln.rstrip() for ln in raw_lines]
+        if not lines:
+            return ""
+
+        heading_regex = re.compile(
+            r'^\s*(?:[（(]?[一二三四五六七八九十0-9]+[)）][、.]?\s*|[一二三四五六七八九十0-9]+[、.．]\s*)?'
+            r'(奖项介绍|奖项设置|奖励设置|奖励办法|奖项说明|奖项及奖励|奖励标准|奖项与奖励)\s*[:：]?\s*(.*)$'
+        )
+        next_section_regex = re.compile(
+            r'^\s*(?:[（(]?[一二三四五六七八九十0-9]+[)）][、.]?\s*|[一二三四五六七八九十0-9]+[、.．]\s*)?'
+            r'(参赛对象|参与对象|竞赛对象|奖励对象|参赛资格|报名条件|报名方式|报名要求|联系方式|联系渠道|比赛流程|时间安排|提交方式|组织单位|主办单位|承办单位)\b'
+        )
+        generic_section_regex = re.compile(
+            r'^\s*(?:[（(]?[一二三四五六七八九十0-9]+[)）][、.]?|[一二三四五六七八九十0-9]+[、.．])\s*'
+        )
+
+        start = -1
+        heading_label = ""
+        inline_tail = ""
+        for idx, line in enumerate(lines):
+            m = heading_regex.match(line.strip())
             if m:
-                cleaned = self._clean_text(m.group(1))
-                return cleaned[:200]
-        # 备选使用 publisher
-        if publisher and len(publisher) <= 50:
-            cleaned = self._clean_text(publisher)
-            return cleaned[:200]
-        return ""
-
-    # ---------- 参与者（跨行支持，只取第一个句子）----------
-    def parse_participants(self, text: str) -> str:
-        if not text:
+                start = idx
+                heading_label = m.group(1)
+                inline_tail = (m.group(2) or "").strip()
+                break
+        if start < 0:
             return ""
-        # 跨行匹配，但限制长度
-        pat = r'(?:参赛对象|参与对象|面向对象|活动对象|参赛资格)[：:]\s*([\s\S]{10,300})'
-        m = re.search(pat, text, re.I)
-        if m:
-            raw = m.group(1).strip()
-            # 提取第一个句号、分号或换行前的内容
-            content = re.split(r'[。；\n]', raw)[0]
-            # 避免包含奖项等后续章节
-            if '奖项' in content or '奖励' in content:
-                if '，' in content:
-                    content = content.split('，')[0]
-            cleaned = self._clean_text(content)
-            return cleaned[:300]
-        return ""
 
-    # ---------- 奖项（只取奖项设置段落，遇到“注：”或标题截断）----------
-    def parse_prize(self, text: str) -> str:
-        if not text:
+        collected = []
+        if inline_tail:
+            collected.append(inline_tail)
+        for idx in range(start + 1, len(lines)):
+            line = lines[idx].strip()
+            if not line:
+                continue
+            if next_section_regex.match(line):
+                break
+            if heading_regex.match(line):
+                break
+            # 新章节开始（如“六、”）时停止，避免跨段抓取。
+            # 但在“奖项设置”内部允许保留“（一）（二）（三）”分条款内容。
+            if generic_section_regex.match(line) and not heading_regex.match(line):
+                if re.match(r'^\s*[（(][一二三四五六七八九十0-9]+[)）]', line):
+                    if re.search(r'省赛|国赛|证书发放|获奖|奖项|比例|综测|校赛', line):
+                        collected.append(line)
+                        continue
+                # 兼容“1. 一等奖：...”这类阿拉伯数字分条奖项内容
+                if re.match(r'^\s*\d+\s*[.．、]\s*', line):
+                    if re.search(r'一等奖|二等奖|三等奖|优秀奖|获奖|奖项|证书|奖品|比例|综测|校赛', line):
+                        collected.append(line)
+                        continue
+                break
+            collected.append(line)
+
+        if not collected and inline_tail:
+            cleaned_tail = re.sub(r'^(?:及晋级|如下|如下所示|说明如下)\s*', '', inline_tail).strip()
+            return f"{heading_label}：{cleaned_tail}" if cleaned_tail else heading_label
+        if not collected:
             return ""
-        # 匹配“奖项设置”后到下一个标题（如“七、”）或“注：”、“附件”前的内容
-        m = re.search(r'(?:奖项设置|奖励办法|奖项)[：:]\s*([\s\S]{20,500}?)(?=\n\s*[一二三四五六七八九十]、|注[：:]|附件|$)', text, re.I)
-        if m:
-            raw = m.group(1).strip()
-            # 清理多余内容
-            raw = re.split(r'[注：附件]', raw)[0]
-            cleaned = self._clean_text(raw)
-            return cleaned[:500]
-        # 尝试匹配列表形式的奖项
-        prize_patterns = [
-            r'(一等奖[：:][^。；;]{10,200})',
-            r'(二等奖[：:][^。；;]{10,200})',
-            r'(三等奖[：:][^。；;]{10,200})',
-        ]
-        prizes = []
-        for pattern in prize_patterns:
-            matches = re.findall(pattern, text, re.I)
-            prizes.extend(matches)
-        if prizes:
-            cleaned = self._clean_text('; '.join(prizes))
-            return cleaned[:500]
-        # 否则抓取一等奖到三等奖之间的内容
-        m2 = re.search(r'(一等奖|二等奖|三等奖)[\s\S]{0,200}', text)
-        if m2:
-            content = m2.group(0)
-            cleaned = self._clean_text(content)
-            return cleaned[:400]
-        return ""
+        # 保留原始阅读顺序中的段落换行，避免强行拼成一行
+        merged = "\n".join(collected)
+        merged = re.sub(r'[ \t]+', ' ', merged).strip()
+        merged = re.sub(r'^(?:及晋级|如下|如下所示|说明如下)\s*', '', merged).strip()
+        # 若内容本身已是“（一）（二）...”分条，则直接返回分条原文，不再加“奖项设置：”前缀
+        if re.match(r'^\s*(?:[（(][一二三四五六七八九十0-9]+[)）]|\d+\s*[.．、])', merged):
+            return merged
+        return f"{heading_label}：{merged}" if merged else ""
 
     # ---------- 参赛要求 ----------
     def parse_requirement(self, text: str) -> str:
@@ -1353,24 +2587,164 @@ class SmartParser:
             return re.sub(r'\s+', ' ', m.group(1))[:500]
         return ""
 
-    # ---------- 联系方式（分离多模式）----------
+    def _extract_contact_components(self, text: str) -> dict:
+        """提取联系人、电话、邮箱、QQ号、QQ群号"""
+        clean_text = self._clean_text(text)
+        
+        email_pattern = r'[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}'
+        raw_emails = re.findall(email_pattern, clean_text)
+        emails = []
+        for e in raw_emails:
+            val = e.replace(' ', '')
+            if val not in emails:
+                emails.append(val)
+        
+        group_pattern = r'(?:QQ群|群聊)[:：]?\s*(\d{5,11})'
+        groups = []
+        for g in re.findall(group_pattern, clean_text):
+            if g not in groups:
+                groups.append(g)
+
+        # 联系人（优先显式标签）
+        contact_person = "null"
+        person_patterns = [
+            r'(?:联系人|联 系 人)[:：]?\s*([\u4e00-\u9fa5]{2,8})',
+            r'(?:联系人|联 系 人)[:：]?\s*([A-Za-z]{2,30})',
+        ]
+        for pattern in person_patterns:
+            mp = re.search(pattern, clean_text)
+            if mp:
+                candidate = mp.group(1).strip()
+                if candidate:
+                    contact_person = candidate
+                    break
+
+        # 电话（手机 + 座机）
+        phones = []
+        phone_patterns = [
+            r'1[3-9]\d{9}',                    # 手机
+            r'0[1-9]\d{1,2}-\d{7,8}',          # 座机带连字符（区号不以0结尾）
+            r'0[1-9]\d{1,2}\d{7,8}',           # 座机不带连字符
+        ]
+        for pattern in phone_patterns:
+            for m in re.finditer(pattern, clean_text):
+                ph = m.group(0)
+                ctx = clean_text[max(0, m.start() - 12):min(len(clean_text), m.end() + 8)]
+                if not re.search(r'联系|电话|手机|热线|咨询|微信|QQ', ctx):
+                    continue
+                if ph not in phones:
+                    phones.append(ph)
+
+        # 微信（服务号/公众号/微信号）
+        wechats = []
+        wechat_patterns = [
+            r'(?:微信服务号|微信公众号|微信号|微信)[:：]?\s*([A-Za-z0-9_\-]{3,40})',
+            r'关注(?:微信服务号|微信公众号)[:：]?\s*([A-Za-z0-9_\-]{3,40})',
+            r'关注[“"\']?([\u4e00-\u9fa5A-Za-z0-9_\-]{2,40})[”"\']?(?:微信服务号|微信公众号)',
+            r'([“"\']?[\u4e00-\u9fa5A-Za-z0-9_\-]{2,40}[”"\']?)(?:微信服务号|微信公众号)',
+        ]
+        for pattern in wechat_patterns:
+            for w in re.findall(pattern, clean_text):
+                wv = w.strip().strip('“”"\'')
+                if not wv:
+                    continue
+                if wv in {"联系方式", "活动中心", "活动报名", "微信服务号", "微信公众号", "学会"}:
+                    continue
+                if wv not in wechats:
+                    wechats.append(wv)
+
+        # 官网/网站
+        websites = []
+        site_patterns = [
+            r'(?:竞赛官网|官网|官方网站)[:：]?\s*(https?://[^\s；;，。]+)',
+            r'(?:竞赛官网|官网|官方网站)[:：]?\s*(www\.[^\s；;，。]+)',
+            r'(https?://[^\s；;，。]+)',
+            r'(www\.[^\s；;，。]+)',
+        ]
+        for pattern in site_patterns:
+            for s in re.findall(pattern, clean_text):
+                sv = s.strip().rstrip(')）】》,，。;；')
+                if sv.startswith("www."):
+                    sv = "http://" + sv
+                low = sv.lower()
+                # 过滤站内附件/图标与文档资源链接
+                if any(x in low for x in ["/_upload/", "/_ueditor/", "icon_doc.gif", "icon_pdf.gif", "icon_xls.gif"]):
+                    continue
+                if re.search(r'\.(?:jpg|jpeg|png|gif|webp|bmp|doc|docx|xls|xlsx|pdf)(?:$|[?#])', low):
+                    continue
+                if sv and sv not in websites:
+                    websites.append(sv)
+        
+        qq_pattern = r'(?<!\d)(\d{5,11})(?!\d)'
+        qqs = []
+        for m in re.finditer(qq_pattern, clean_text):
+            q = m.group(1)
+            if q in groups:
+                continue
+            # 避免把座机后半段识别成QQ（如 027-81973792）
+            prev = clean_text[max(0, m.start() - 5):m.start()]
+            if "-" in prev:
+                continue
+            # 避免把手机号识别成QQ
+            if re.match(r'^1[3-9]\d{9}$', q):
+                continue
+            # 仅在联系方式上下文中采纳，降低误提取概率
+            start = max(0, m.start() - 10)
+            end = min(len(clean_text), m.end() + 4)
+            ctx = clean_text[start:end]
+            if not re.search(r'QQ|qq|联系|群|邮箱|mail|@', ctx):
+                continue
+            if q not in qqs:
+                qqs.append(q)
+
+        # 去重：若邮箱本地部分本身就是纯数字QQ号，则不再重复输出到 QQ 字段
+        email_local_numeric_ids = set()
+        for e in emails:
+            parts = e.split("@", 1)
+            if len(parts) != 2:
+                continue
+            local, domain = parts[0], parts[1].lower()
+            if domain in {"qq.com", "vip.qq.com"} and re.fullmatch(r"\d{5,11}", local):
+                email_local_numeric_ids.add(local)
+        if email_local_numeric_ids:
+            qqs = [q for q in qqs if q not in email_local_numeric_ids]
+        
+        return {
+            "contact_person": contact_person,
+            "contact_phone": ",".join(phones[:5]) if phones else "null",
+            "contact_wechat": ",".join(wechats[:5]) if wechats else "null",
+            "contact_website": ",".join(websites[:5]) if websites else "null",
+            "contact_email": ",".join(emails) if emails else "null",
+            "contact_qq": ",".join(qqs[:5]) if qqs else "null",
+            "contact_group": ",".join(groups) if groups else "null",
+        }
+    
     def parse_contact(self, text: str) -> str:
-        if not text:
-            return ""
+        """
+        解析联系渠道（contact）
+        
+        规则：
+        1. 关键词匹配：联系|电话|邮箱|QQ|微信|联系方式
+        2. 无关键词时：直接匹配手机号（11位）、邮箱（含@）、QQ号（5-12位）
+        3. 兜底：null
+        """
+        info = self._extract_contact_components(text)
         parts = []
-        phones = re.findall(r'1[3-9]\d{9}', text)
-        parts.extend(phones[:2])
-        tels = re.findall(r'0\d{2,3}-\d{7,8}', text)
-        parts.extend(tels[:2])
-        emails = re.findall(r'[\w\.-]+@[\w\.-]+\.\w+', text)
-        parts.extend(emails[:2])
-        qq = re.findall(r'QQ群[：:]\s*(\d+)', text, re.I)
-        parts.extend([f'QQ群:{g}' for g in qq[:1]])
-        person = re.findall(r'联系人[：:]\s*([\u4e00-\u9fa5]{2,4})', text)
-        parts.extend([f'联系人:{p}' for p in person[:1]])
-        if not parts:
-            return ""
-        return '; '.join(dict.fromkeys(parts))
+        if info.get('contact_person') and info['contact_person'] != "null":
+            parts.append(f"联系人:{info['contact_person']}")
+        if info.get('contact_phone') and info['contact_phone'] != "null":
+            parts.append(f"电话:{info['contact_phone']}")
+        if info.get('contact_wechat') and info['contact_wechat'] != "null":
+            parts.append(f"微信:{info['contact_wechat']}")
+        if info.get('contact_website') and info['contact_website'] != "null":
+            parts.append(f"官网:{info['contact_website']}")
+        if info.get('contact_email') and info['contact_email'] != "null":
+            parts.append(f"邮箱:{info['contact_email']}")
+        if info.get('contact_qq') and info['contact_qq'] != "null":
+            parts.append(f"QQ:{info['contact_qq']}")
+        if info.get('contact_group') and info['contact_group'] != "null":
+            parts.append(f"群号:{info['contact_group']}")
+        return ";".join(parts) if parts else "null"
 
     # ---------- 摘要和标签（保持不变）----------
     def generate_summary(self, title: str, content: str, max_length: int = 100) -> str:
@@ -1406,8 +2780,20 @@ class SmartParser:
             # 将 publisher 也拼入 text 中用于解析
             text = contest.get('title', '') + ' ' + contest.get('content', '') + ' ' + publisher
             contest['deadline'] = self.parse_deadline(text, publish_time=publish_time)
-            contest['organizer'] = self.parse_organizer(text, publisher)
-            contest['participants'] = self.parse_participants(text)
+            parsed_organizer = self.parse_organizer(text)
+            if self._is_joint_organizer_candidate(parsed_organizer):
+                contest['organizer'] = parsed_organizer
+            elif (
+                parsed_organizer == "null"
+                or not self._is_valid_organizer(parsed_organizer)
+                or self._looks_like_sentence_fragment(parsed_organizer)
+            ):
+                contest['organizer'] = self._fallback_organizer_by_context(contest)
+            else:
+                contest['organizer'] = parsed_organizer
+            contest['participants'] = self._strip_participant_clause_ordinals(
+                self.parse_participants(text)
+            )
             contest['prize'] = self.parse_prize(text)
             contest['contact'] = self.parse_contact(text)
             contest['requirement'] = self.parse_requirement(text)
