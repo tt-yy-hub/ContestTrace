@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-新建 data\contest_trace_raw.db，汇总 15 个原始数据库的公告
+将各学院原始数据库中当日新爬取的公告汇总到主原始数据库
+- 不删除旧数据库，只追加当日新数据
+- 避免重复插入
 """
 
 import os
 import sqlite3
 import logging
 from pathlib import Path
-from datetime import datetime
+from datetime import date, datetime
 
 # 设置日志
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -41,22 +43,22 @@ RAW_DBS = [
 
 def create_raw_db():
     """
-    新建 data\contest_trace_raw.db，汇总 15 个原始数据库的公告
+    将各学院原始数据库中当日新爬取的公告汇总到主原始数据库
+    - 不删除旧数据库，只追加当日新数据
     """
-    logger.info("开始创建并汇总原始数据库...")
+    logger.info("开始汇总当日新公告到原始数据库...")
     
     # 确保数据目录存在
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     
-    # 删除已存在的文件
-    if MAIN_RAW_DB.exists():
-        logger.info(f"删除已存在的 {MAIN_RAW_DB}")
-        MAIN_RAW_DB.unlink()
+    # 确保主原始数据库和表存在
+    ensure_main_db_exists()
     
-    # 创建新的主原始数据库
-    create_main_db()
+    # 获取今天的日期
+    today = date.today().isoformat()
+    logger.info(f"只汇总 {today} 当日新爬取的公告")
     
-    # 合并每个原始数据库
+    # 合并每个原始数据库中当日新增的公告
     total_records = 0
     for db_name in RAW_DBS:
         db_file = DATA_DIR / db_name
@@ -64,22 +66,23 @@ def create_raw_db():
             logger.warning(f"数据库文件 {db_name} 不存在，跳过")
             continue
         
-        logger.info(f"合并 {db_name}...")
-        records_count = merge_db(db_file, db_name)
+        logger.info(f"处理 {db_name} 中当日新公告...")
+        records_count = merge_db(db_file, db_name, today)
         total_records += records_count
-        logger.info(f"成功合并 {records_count} 条记录")
+        if records_count > 0:
+            logger.info(f"成功汇总 {records_count} 条新公告")
     
-    logger.info(f"合并完成！共合并 {total_records} 条记录到 {MAIN_RAW_DB}")
+    logger.info(f"汇总完成！共汇总 {total_records} 条当日新公告到 {MAIN_RAW_DB}")
 
-def create_main_db():
+def ensure_main_db_exists():
     """
-    创建新的主原始数据库
+    确保主原始数据库和表存在
     """
     try:
         conn = sqlite3.connect(MAIN_RAW_DB)
         cursor = conn.cursor()
         
-        # 创建原始公告表
+        # 创建原始公告表（如果不存在）
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS raw_notices (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -107,19 +110,20 @@ def create_main_db():
         
         conn.commit()
         conn.close()
-        logger.info(f"主原始数据库 {MAIN_RAW_DB} 创建成功")
+        logger.info(f"主原始数据库 {MAIN_RAW_DB} 检查完成")
     except Exception as e:
-        logger.error(f"创建主原始数据库失败: {e}")
+        logger.error(f"检查主原始数据库失败: {e}")
         raise
 
-def merge_db(db_file, db_name):
+def merge_db(db_file, db_name, today):
     """
-    合并单个原始数据库到主数据库
-    
+    合并单个原始数据库中当日新增的公告到主数据库
+
     Args:
         db_file: 原始数据库文件路径
         db_name: 原始数据库名称
-    
+        today: 当日日期字符串 (YYYY-MM-DD)
+
     Returns:
         合并的记录数
     """
@@ -127,131 +131,103 @@ def merge_db(db_file, db_name):
         # 连接源数据库
         src_conn = sqlite3.connect(db_file)
         src_cursor = src_conn.cursor()
-        
+
         # 连接目标数据库
         dest_conn = sqlite3.connect(MAIN_RAW_DB)
         dest_cursor = dest_conn.cursor()
-        
-        # 查询源数据库中的所有记录
+
+        # 检查源数据库的表结构
         try:
-            # 优先从notices表中读取数据，因为它的结构更完整
-            src_cursor.execute('SELECT * FROM notices')
-            rows = src_cursor.fetchall()
-            logger.info(f"从notices表中获取到 {len(rows)} 条记录")
+            # 优先从notices表中读取数据
+            src_cursor.execute('SELECT * FROM notices LIMIT 1')
+            src_columns = [description[0] for description in src_cursor.description]
+            logger.info(f"从notices表读取，列: {src_columns}")
         except sqlite3.OperationalError as e:
             logger.error(f"从notices表读取失败: {e}")
-            # 尝试从raw_notices表中读取数据
-            try:
-                src_cursor.execute('SELECT * FROM raw_notices')
-                rows = src_cursor.fetchall()
-                logger.info(f"从raw_notices表中获取到 {len(rows)} 条记录")
-            except Exception as e2:
-                logger.error(f"从raw_notices表读取也失败: {e2}")
-                return 0
-        
+            src_conn.close()
+            dest_conn.close()
+            return 0
+
+        # 检查是否有 crawl_time 列
+        has_crawl_time = 'crawl_time' in src_columns
+
+        if has_crawl_time:
+            # 只查询当日新爬取的公告（根据 crawl_time 判断）
+            query = 'SELECT * FROM notices WHERE DATE(crawl_time) = ?'
+            src_cursor.execute(query, (today,))
+            rows = src_cursor.fetchall()
+            logger.info(f"从notices表中获取到 {len(rows)} 条当日新增记录")
+        else:
+            # 如果没有 crawl_time 列，则跳过（当日新增应该在爬虫层已经判断过）
+            logger.info(f"该数据库没有 crawl_time 列，跳过")
+            src_conn.close()
+            dest_conn.close()
+            return 0
+
+        if len(rows) == 0:
+            logger.info(f"当日没有新公告需要汇总")
+            src_conn.close()
+            dest_conn.close()
+            return 0
+
+        # 获取源表的列索引
+        col_indices = {col: idx for idx, col in enumerate(src_columns)}
+
         # 插入记录到目标数据库
         inserted_count = 0
         for row in rows:
             try:
-                # 从源记录中提取字段
-                # notices表结构: id, title, url, source, publish_time, crawl_time, deadline, category, organizer, participants, prize, requirement, contact, content, keywords, tags, spider_name, created_at, updated_at
-                if len(row) >= 19:
-                    notice_id = row[0]
-                    title = row[1]
-                    notice_url = row[2]
-                    publisher = row[3]
-                    publish_time = row[4]
-                    crawl_time = row[5]
-                    deadline = row[6]
-                    category = row[7]
-                    organizer = row[8]
-                    participants = row[9]
-                    prize = row[10]
-                    requirement = row[11]
-                    contact = row[12]
-                    content = row[13]
-                    keywords = row[14]
-                    tags = row[15]
-                    spider_name = row[16]
-                    created_at = row[17]
-                    updated_at = row[18]
-                elif len(row) >= 8:
-                    # 假设表结构: id, title, url, source, publish_time, crawl_time, content, spider_name
-                    notice_id = row[0]
-                    title = row[1]
-                    notice_url = row[2]
-                    publisher = row[3]
-                    publish_time = row[4]
-                    crawl_time = row[5]
-                    content = row[6]
-                    spider_name = row[7] if len(row) > 7 else db_name.replace("contest_trace_raw_", "").replace(".db", "")
-                    deadline = None
-                    category = None
-                    organizer = None
-                    participants = None
-                    prize = None
-                    requirement = None
-                    contact = None
-                    keywords = None
-                    tags = None
-                    created_at = datetime.now().isoformat()
-                    updated_at = datetime.now().isoformat()
-                elif len(row) >= 7:
-                    # 假设表结构: id, notice_url, title, publish_time, publisher, content, crawl_time
-                    notice_id = row[0]
-                    notice_url = row[1]
-                    title = row[2]
-                    publish_time = row[3]
-                    publisher = row[4]
-                    content = row[5]
-                    crawl_time = row[6]
-                    spider_name = db_name.replace("contest_trace_raw_", "").replace(".db", "")
-                    deadline = None
-                    category = None
-                    organizer = None
-                    participants = None
-                    prize = None
-                    requirement = None
-                    contact = None
-                    keywords = None
-                    tags = None
-                    created_at = datetime.now().isoformat()
-                    updated_at = datetime.now().isoformat()
-                else:
-                    # 无法处理的表结构
-                    logger.error(f"无法处理的表结构，行长度: {len(row)}")
-                    continue
-                
+                # 根据列名获取对应索引的值
+                notice_id = row[col_indices.get('id', 0)]
+                title = row[col_indices.get('title', 1)]
+                notice_url = row[col_indices.get('url', 2)]
+                publisher = row[col_indices.get('publisher', 3)]
+                publish_time = row[col_indices.get('publish_time', 4)]
+                crawl_time = row[col_indices.get('crawl_time', 5)] if has_crawl_time else ''
+                deadline = row[col_indices.get('deadline', 6)] if 'deadline' in col_indices else None
+                category = row[col_indices.get('category', 7)] if 'category' in col_indices else None
+                organizer = row[col_indices.get('organizer', 8)] if 'organizer' in col_indices else None
+                participants = row[col_indices.get('participants', 9)] if 'participants' in col_indices else None
+                prize = row[col_indices.get('prize', 10)] if 'prize' in col_indices else None
+                requirement = row[col_indices.get('requirement', 11)] if 'requirement' in col_indices else None
+                contact = row[col_indices.get('contact', 12)] if 'contact' in col_indices else None
+                content = row[col_indices.get('content', 13)] if 'content' in col_indices else ''
+                keywords = row[col_indices.get('keywords', 14)] if 'keywords' in col_indices else None
+                tags = row[col_indices.get('tags', 15)] if 'tags' in col_indices else None
+                spider_name = row[col_indices.get('spider_name', 16)] if 'spider_name' in col_indices else db_name.replace("contest_trace_raw_", "").replace(".db", "")
+                created_at = row[col_indices.get('created_at', 17)] if 'created_at' in col_indices else datetime.now().isoformat()
+                updated_at = row[col_indices.get('updated_at', 18)] if 'updated_at' in col_indices else datetime.now().isoformat()
+
                 # 准备插入数据
                 url = notice_url
                 source = publisher
-                
-                # 执行插入
+
+                # 执行插入（使用 INSERT OR IGNORE，URL 冲突时忽略）
                 dest_cursor.execute('''
-                INSERT OR IGNORE INTO raw_notices 
-                (title, url, source, publish_time, crawl_time, 
-                 deadline, category, organizer, participants, prize, 
-                 requirement, contact, content, keywords, tags, 
+                INSERT OR IGNORE INTO raw_notices
+                (title, url, source, publish_time, crawl_time,
+                 deadline, category, organizer, participants, prize,
+                 requirement, contact, content, keywords, tags,
                  spider_name, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ''', (title, url, source, publish_time, crawl_time, 
-                      deadline, category, organizer, participants, prize, 
-                      requirement, contact, content, keywords, tags, 
+                ''', (title, url, source, publish_time, crawl_time,
+                      deadline, category, organizer, participants, prize,
+                      requirement, contact, content, keywords, tags,
                       spider_name, created_at, updated_at))
-                
+
                 if dest_cursor.rowcount > 0:
                     inserted_count += 1
             except Exception as e:
                 logger.error(f"插入记录失败: {e}")
                 continue
-        
+
         # 提交事务
         dest_conn.commit()
-        
+
         # 关闭连接
         src_conn.close()
         dest_conn.close()
-        
+
         return inserted_count
     except Exception as e:
         logger.error(f"合并数据库 {db_name} 失败: {e}")
