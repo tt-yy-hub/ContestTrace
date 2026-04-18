@@ -18,6 +18,7 @@
                     <li><a href="index.html"><i class="fas fa-home"></i> 首页</a></li>
                     <li><a href="stats.html" class="active"><i class="fas fa-chart-bar"></i> 数据统计</a></li>
                     <li><a href="favorites.html"><i class="fas fa-star"></i> 我的收藏</a></li>
+                    <li><a href="calendar.html"><i class="fas fa-calendar"></i> 竞赛日历</a></li>
                 </ul>
             </nav>
         </div>
@@ -58,6 +59,15 @@
             </div>
         </section>
 
+        <section class="hot-contests">
+            <div class="container">
+                <h2>热门竞赛榜单</h2>
+                <div class="hot-contests-list" id="hot-contests-container">
+                    <!-- 热门竞赛将通过 JavaScript 动态添加 -->
+                </div>
+            </div>
+        </section>
+
         <section id="about" class="about">
             <div class="container">
                 <h2>关于我们</h2>
@@ -80,7 +90,15 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/data.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/sync.js"></script>
     <script src="js/stats.js"></script>
     <script src="js/reminder.js"></script>
+    <script>
+        // 页面加载完成后初始化登录状态
+        window.addEventListener('DOMContentLoaded', function() {
+            initNavbarLoginStatus();
+        });
+    </script>
 </body>
 </html>

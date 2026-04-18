@@ -18,6 +18,7 @@
                     <li><a href="index.html" class="active"><i class="fas fa-home"></i> 首页</a></li>
                     <li><a href="stats.html"><i class="fas fa-chart-bar"></i> 数据统计</a></li>
                     <li><a href="favorites.html"><i class="fas fa-star"></i> 我的收藏</a></li>
+                    <li><a href="calendar.html"><i class="fas fa-calendar"></i> 竞赛日历</a></li>
                 </ul>
             </nav>
         </div>
@@ -198,7 +199,16 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/data.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/sync.js"></script>
     <script src="js/main.js"></script>
     <script src="js/reminder.js"></script>
+    <script>
+        // 页面加载完成后初始化登录状态
+        window.addEventListener('DOMContentLoaded', function() {
+            initNavbarLoginStatus();
+            initSync();
+        });
+    </script>
 </body>
 </html>

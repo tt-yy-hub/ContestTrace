@@ -152,3 +152,61 @@ function paginate(data, page, pageSize) {
 function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2);
 }
+
+// 记录竞赛行为
+function recordContestAction(contestId, actionType) {
+    // 加载现有的热度数据
+    const contestHotness = getFromLocalStorage('contest_hotness', {});
+    
+    // 初始化该竞赛的热度数据
+    if (!contestHotness[contestId]) {
+        contestHotness[contestId] = {
+            views: 0,
+            favorites: 0,
+            useful: 0,
+            total: 0
+        };
+    }
+    
+    // 根据行为类型增加相应的热度值
+    switch (actionType) {
+        case 'view':
+            contestHotness[contestId].views += 1;
+            contestHotness[contestId].total += 1;
+            break;
+        case 'favorite':
+            contestHotness[contestId].favorites += 3;
+            contestHotness[contestId].total += 3;
+            break;
+        case 'useful':
+            contestHotness[contestId].useful += 2;
+            contestHotness[contestId].total += 2;
+            break;
+    }
+    
+    // 保存热度数据
+    saveToLocalStorage('contest_hotness', contestHotness);
+}
+
+// 获取热门竞赛
+function getHotContests(limit = 10) {
+    // 加载所有竞赛
+    const allContests = loadAllContests();
+    // 加载热度数据
+    const contestHotness = getFromLocalStorage('contest_hotness', {});
+    
+    // 计算每个竞赛的热度
+    const contestsWithHotness = allContests.map(contest => {
+        const hotness = contestHotness[contest.id] || { total: 0 };
+        return {
+            ...contest,
+            hotness: hotness.total
+        };
+    });
+    
+    // 按热度排序
+    contestsWithHotness.sort((a, b) => b.hotness - a.hotness);
+    
+    // 返回前 limit 个
+    return contestsWithHotness.slice(0, limit);
+}

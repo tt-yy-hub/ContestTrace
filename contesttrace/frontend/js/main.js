@@ -435,6 +435,8 @@ function createContestCard(contest) {
     
     // 点击卡片打开模态框
     card.addEventListener('click', function() {
+        // 记录查看行为
+        recordContestAction(contest.id, 'view');
         openContestModal(contest);
     });
     
@@ -572,8 +574,21 @@ function initModal() {
     if (favoriteBtn) {
         favoriteBtn.addEventListener('click', function() {
             const contestUrl = this.dataset.url;
+            const wasFavorite = isFavorite(contestUrl);
             toggleFavorite(contestUrl);
-            this.textContent = isFavorite(contestUrl) ? '取消收藏' : '收藏';
+            const isNowFavorite = isFavorite(contestUrl);
+            
+            // 记录收藏行为
+            if (!wasFavorite && isNowFavorite) {
+                // 查找竞赛对象
+                const allContests = loadAllContests();
+                const contest = allContests.find(c => c.url === contestUrl);
+                if (contest) {
+                    recordContestAction(contest.id, 'favorite');
+                }
+            }
+            
+            this.textContent = isNowFavorite ? '取消收藏' : '收藏';
         });
     }
     
@@ -581,6 +596,14 @@ function initModal() {
     const likeBtn = document.getElementById('like-btn');
     if (likeBtn) {
         likeBtn.addEventListener('click', function() {
+            // 记录有用行为
+            const modalTitle = document.getElementById('modal-title');
+            const contestTitle = modalTitle ? modalTitle.textContent : '';
+            const allContests = loadAllContests();
+            const contest = allContests.find(c => c.title === contestTitle);
+            if (contest) {
+                recordContestAction(contest.id, 'useful');
+            }
             alert('感谢您的反馈！');
         });
     }
