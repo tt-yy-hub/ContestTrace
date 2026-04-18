@@ -33,11 +33,11 @@ function getDaysLeftClass(daysLeft) {
 }
 
 // 生成剩余天数文本
-function getDaysLeftText(daysLeft) {
-    if (daysLeft < 0) return '已过期';
-    if (daysLeft === 0) return '今天截止';
-    if (daysLeft === 1) return '明天截止';
-    return `${daysLeft}天后截止`;
+function getDaysLeftText(daysLeft, isActivityDate = false) {
+    if (daysLeft < 0) return isActivityDate ? '已结束' : '已过期';
+    if (daysLeft === 0) return isActivityDate ? '今天开始' : '今天截止';
+    if (daysLeft === 1) return isActivityDate ? '明天开始' : '明天截止';
+    return isActivityDate ? `${daysLeft}天后开始` : `${daysLeft}天后截止`;
 }
 
 // 本地存储操作

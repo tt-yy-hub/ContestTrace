@@ -184,23 +184,46 @@ function saveFavorites(favorites) {
 
 // 加载收藏的竞赛
 function loadFavorites() {
-    return getFromLocalStorage('contest_favorites', []);
+    const favorites = getFromLocalStorage('contest_favorites', []);
+    // 过滤掉无效的收藏（没有id或没有title的对象）
+    if (Array.isArray(favorites)) {
+        // 去重：以id为key，保留最后一个（最新添加的）
+        const seen = new Map();
+        const validFavorites = favorites.filter(fav => fav && fav.id && fav.title);
+        return validFavorites.filter(fav => {
+            const key = String(fav.id);
+            if (seen.has(key)) {
+                return false;
+            }
+            seen.set(key, true);
+            return true;
+        });
+    }
+    return [];
 }
 
 // 检查竞赛是否已收藏
-function isFavorite(contestUrl) {
+function isFavorite(contestId) {
     const favorites = loadFavorites();
-    return favorites.includes(contestUrl);
+    // 确保contestId是字符串类型进行比较
+    return favorites.some(fav => String(fav.id) === String(contestId));
 }
 
 // 切换收藏状态
-function toggleFavorite(contestUrl) {
+function toggleFavorite(contestId, contest) {
     let favorites = loadFavorites();
-    const index = favorites.indexOf(contestUrl);
-    if (index > -1) {
-        favorites.splice(index, 1);
+    // 确保ID类型一致
+    const contestIdStr = String(contestId);
+    
+    // 检查是否已收藏
+    const existingIndex = favorites.findIndex(fav => String(fav.id) === contestIdStr);
+    if (existingIndex > -1) {
+        // 已收藏，则移除
+        favorites.splice(existingIndex, 1);
     } else {
-        favorites.push(contestUrl);
+        // 未收藏，则添加（先去重再添加，防止重复）
+        favorites = favorites.filter(fav => String(fav.id) !== contestIdStr);
+        favorites.push(contest);
     }
     saveFavorites(favorites);
     return favorites;

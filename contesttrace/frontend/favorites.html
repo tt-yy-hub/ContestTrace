@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>学科竞赛信息聚合平台</title>
+    <title>我的收藏 - 学科竞赛信息聚合平台</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
@@ -15,9 +15,9 @@
             </div>
             <nav class="nav">
                 <ul>
-                    <li><a href="index.html" class="active"><i class="fas fa-home"></i> 首页</a></li>
+                    <li><a href="index.html"><i class="fas fa-home"></i> 首页</a></li>
                     <li><a href="stats.html"><i class="fas fa-chart-bar"></i> 数据统计</a></li>
-                    <li><a href="favorites.html"><i class="fas fa-star"></i> 我的收藏</a></li>
+                    <li><a href="favorites.html" class="active"><i class="fas fa-star"></i> 我的收藏</a></li>
                 </ul>
             </nav>
         </div>
@@ -26,11 +26,12 @@
     <main class="main">
         <section class="hero">
             <div class="container">
-                <h2>智能聚合，精准推送</h2>
-                <p>实时聚合各学院竞赛信息，智能筛选匹配，为你推荐最适合的学科竞赛</p>
-                <div class="search-box">
-                    <input type="text" id="search-input" placeholder="搜索竞赛...">
-                    <button id="search-button"><i class="fas fa-search"></i></button>
+                <h2>我的收藏</h2>
+                <p>管理和查看您收藏的竞赛信息</p>
+                <div class="action-buttons">
+                    <button id="enable-notifications"><i class="fas fa-bell"></i> 开启通知提醒</button>
+                    <button id="disable-notifications"><i class="fas fa-bell-slash"></i> 关闭通知提醒</button>
+                    <button id="clear-favorites"><i class="fas fa-trash"></i> 清空所有收藏</button>
                 </div>
             </div>
         </section>
@@ -103,12 +104,14 @@
                     </div>
                 </div>
 
-                <div class="contests" id="contest-container">
-                    <!-- 竞赛卡片将通过 JavaScript 动态添加 -->
-                </div>
-
-                <div class="pagination" id="pagination">
-                    <!-- 分页控件将通过 JavaScript 动态添加 -->
+                <div class="contests" id="favorite-container">
+                    <!-- 收藏的竞赛卡片将通过 JavaScript 动态添加 -->
+                    <div id="empty-favorites" class="empty-state">
+                        <i class="fas fa-star-half-alt"></i>
+                        <h3>暂无收藏</h3>
+                        <p>您还没有收藏任何竞赛，去首页看看吧！</p>
+                        <a href="index.html" class="btn">去首页</a>
+                    </div>
                 </div>
             </div>
         </section>
@@ -195,10 +198,9 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/data.js"></script>
-    <script src="js/main.js"></script>
+    <script src="js/favorites.js"></script>
     <script src="js/reminder.js"></script>
 </body>
 </html>

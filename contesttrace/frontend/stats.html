@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据统计 - 学科竞赛信息聚合平台</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <h1>学科竞赛信息聚合平台</h1>
+            </div>
+            <nav class="nav">
+                <ul>
+                    <li><a href="index.html"><i class="fas fa-home"></i> 首页</a></li>
+                    <li><a href="stats.html" class="active"><i class="fas fa-chart-bar"></i> 数据统计</a></li>
+                    <li><a href="favorites.html"><i class="fas fa-star"></i> 我的收藏</a></li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <section class="hero">
+            <div class="container">
+                <h2>数据统计</h2>
+                <p>了解学科竞赛信息的分布和趋势</p>
+            </div>
+        </section>
+
+        <section class="statistics">
+            <div class="container">
+                <h2>数据统计</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>总竞赛公告数</h3>
+                        <p id="total-contests">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>本月新增公告</h3>
+                        <p id="monthly-contests">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>收藏总数</h3>
+                        <p id="total-favorites">0</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>即将截止的收藏数</h3>
+                        <p id="upcoming-deadlines">0</p>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="contest-chart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <section id="about" class="about">
+            <div class="container">
+                <h2>关于我们</h2>
+                <p>学科竞赛信息聚合平台致力于为大学生提供全面、及时、准确的学科竞赛信息，帮助学生发现适合自己的竞赛机会，提升个人能力和竞争力。</p>
+                <p>我们通过爬虫技术实时聚合各学院的竞赛信息，经过智能筛选和分类，为用户提供个性化的竞赛推荐。</p>
+                <div class="team">
+                    <h3>开发团队</h3>
+                    <p>我们是一支专注于数据挖掘和信息聚合的技术团队，致力于为学生提供更好的竞赛信息服务。</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 学科竞赛信息聚合平台. 保留所有权利.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/stats.js"></script>
+    <script src="js/reminder.js"></script>
+</body>
+</html>
