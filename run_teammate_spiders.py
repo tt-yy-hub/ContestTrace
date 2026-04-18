@@ -37,38 +37,66 @@ def is_url_exists(db_path, url):
         print(f"检查URL是否存在时出错: {e}")
         return False
 
+# 检查数据库是否已有数据（用于判断是否需要跳过该来源）
+def has_any_data(db_path):
+    """检查数据库是否已有任何数据"""
+    try:
+        # 如果数据库文件不存在，返回False（需要爬取）
+        if not db_path.exists():
+            return False
+
+        conn = sqlite3.connect(str(db_path))
+        cursor = conn.cursor()
+
+        # 检查 notices 表是否存在
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='notices';")
+        table_exists = cursor.fetchone()
+
+        if not table_exists:
+            conn.close()
+            return False
+
+        # 检查 notices 表中是否有数据
+        cursor.execute("SELECT COUNT(*) FROM notices")
+        count = cursor.fetchone()[0]
+        conn.close()
+
+        print(f"数据库 {db_path.name} 中有 {count} 条记录")
+        return count > 0
+    except Exception as e:
+        print(f"检查数据库是否有数据时出错: {e}")
+        return False
+
 # 运行单个爬虫
 def run_spider(spider_dir, spider_name, db_file, spider_file):
-    print(f"运行 {spider_name} 爬虫...")
-    
-    # 构建爬虫路径
-    spider_path = TEAMMATE_SPIDER_DIR / spider_dir / spider_file
-    print(f"爬虫文件路径: {spider_path}")
-    
     # 构建数据库路径
     db_path = DATA_DIR / db_file
-    print(f"数据库文件路径: {db_path}")
+    
+    # 让爬虫运行并处理增量逻辑，即使数据库已有数据
+    # 爬虫会检查URL是否已存在并跳过重复的
     
     # 检查爬虫文件是否存在
+    spider_path = TEAMMATE_SPIDER_DIR / spider_dir / spider_file
     if not spider_path.exists():
         print(f"爬虫文件不存在: {spider_path}")
         return
     
-    # 运行爬虫
+    # 构建命令 - 使用增量模式，爬虫会自动跳过已存在的URL
+    cmd = [
+        sys.executable,
+        str(spider_path),
+        "--mode", "incremental",
+        "--db", str(db_path)
+    ]
+    print(f"处理 {spider_name} 爬虫...")
+    print(f"数据库文件路径: {db_path}")
+    print(f"执行命令: {' '.join(cmd)}")
+    
+    # 执行命令
     try:
-        # 构建命令
-        cmd = [
-            sys.executable,
-            str(spider_path),
-            "--mode", "incremental",  # 使用增量模式，只爬取新增的
-            "--db", str(db_path)
-        ]
-        print(f"执行命令: {' '.join(cmd)}")
-        
-        # 执行命令
         result = subprocess.run(
             cmd,
-            capture_output=False,  # 直接输出到控制台，这样可以看到详细的爬虫输出
+            capture_output=False,
             text=True
         )
         

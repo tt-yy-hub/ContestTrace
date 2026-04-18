@@ -689,6 +689,24 @@ def crawl(
         unique_queue.append(it)
 
     log.info("待抓取详情数: %s", len(unique_queue))
+
+    # 优化：先获取数据库中已存在的所有URL，避免逐一检查
+    existing_urls = set()
+    if mode == "incremental":
+        cursor = conn.execute("SELECT url FROM notices WHERE spider_name = ?", (SPIDER_NAME,))
+        for row in cursor:
+            existing_urls.add(row[0])
+        log.info("数据库中已存在 %s 个URL，将直接跳过", len(existing_urls))
+
+        # 过滤掉已存在的URL
+        unique_queue = [it for it in unique_queue if it.url not in existing_urls]
+        log.info("过滤后待抓取详情数: %s", len(unique_queue))
+
+        if len(unique_queue) == 0:
+            log.info("所有URL均已存在，无需抓取，结束")
+            conn.close()
+            return
+
     inserted = 0
     skipped_dup = 0
     skipped_date_detail = 0

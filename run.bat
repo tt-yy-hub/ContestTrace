@@ -5,12 +5,12 @@ echo =======================================
 echo       ContestTrace Menu
 echo =======================================
 echo 1. Install Dependencies
-echo 2. Run Spiders
+echo 2. Run Spiders Only
 echo 3. Merge Raw Databases
 echo 4. Filter Data
-echo 5. Export Data
+echo 5. Export Data to Frontend
 echo 6. Start Frontend Server
-echo 7. Run Full Process (Spiders->Merge->Filter->Frontend)
+echo 7. Run Full Process (Spiders->Merge->Filter->Export->Frontend)
 echo 0. Exit
 echo =======================================
 echo Please enter option number:
@@ -36,29 +36,29 @@ pause
 goto MENU
 
 :CRAWL
-echo Running spiders...
-call run_teammate_spiders.bat
+echo Running spiders (incremental mode)...
+python run_teammate_spiders.py
 echo Spiders completed successfully!
 pause
 goto MENU
 
 :MERGE
-echo Merging raw databases...
+echo Merging raw databases (today only, preserve existing data)...
 python create_raw_db.py
 echo Raw databases merged successfully!
 pause
 goto MENU
 
 :FILTER
-echo Filtering data...
+echo Filtering data (today only)...
 python filter_raw_to_competition.py
 echo Data filtered successfully!
 pause
 goto MENU
 
 :EXPORT
-echo Exporting data...
-python export_competition_db.py
+echo Exporting data to frontend...
+python run.py --export
 echo Data exported successfully!
 pause
 goto MENU
@@ -74,13 +74,20 @@ goto MENU
 
 :FULL_PROCESS
 echo Running full process...
-echo 1. Running spiders...
-call run_teammate_spiders.bat
-echo 2. Merging raw databases...
+echo.
+echo Step 1: Running spiders (incremental mode)...
+python run_teammate_spiders.py
+echo.
+echo Step 2: Merging raw databases (today only, preserve existing data)...
 python create_raw_db.py
-echo 3. Filtering data...
+echo.
+echo Step 3: Filtering data (today only)...
 python filter_raw_to_competition.py
-echo 4. Starting frontend server...
+echo.
+echo Step 4: Exporting data to frontend...
+python run.py --export
+echo.
+echo Step 5: Starting frontend server...
 echo Please visit http://localhost:8000 in your browser
 echo Press Ctrl+C to exit server...
 pushd contesttrace\frontend
