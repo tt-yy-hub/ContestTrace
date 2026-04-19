@@ -247,15 +247,47 @@ def perform_filter_all():
 def export_data(db_manager, filter_arg=None):
     """
     导出数据
-    
+
     Args:
         db_manager: 数据库管理器
         filter_arg: 筛选参数
     """
-    # 获取竞赛公告
-    contests = db_manager.get_competition_notices()
-    
-    # 按字段筛选
+    import sqlite3
+    import os
+    import json
+
+    db_path = os.path.join('data', 'competition.db')
+
+    if not os.path.exists(db_path):
+        logger.error(f"数据库不存在: {db_path}")
+        return
+
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT * FROM competition_notices')
+    rows = cursor.fetchall()
+
+    column_names = [description[0] for description in cursor.description]
+    contests = []
+    for row in rows:
+        contest = dict(zip(column_names, row))
+        # 处理字段名，确保与前端代码匹配
+        contest['url'] = contest.get('notice_url', '')
+        contest['source_department'] = contest.get('publisher', '')
+        contest['sign_up_deadline'] = contest.get('deadline', '')
+        # 确保包含前端需要的所有字段
+        contest['category'] = contest.get('category', '其他竞赛')
+        contest['summary'] = contest.get('summary', '')
+        contest['keywords'] = contest.get('keywords', [])
+        contest['tags'] = contest.get('tags', '')
+        contest['competition_level'] = contest.get('competition_level', '未知等级')
+        contests.append(contest)
+
+    conn.close()
+
+    logger.info(f"从 {db_path} 获取到 {len(contests)} 条竞赛公告")
+
     if filter_arg:
         field, keyword = filter_arg.split(':', 1)
         filtered_contests = []
@@ -264,19 +296,18 @@ def export_data(db_manager, filter_arg=None):
                 filtered_contests.append(contest)
         contests = filtered_contests
         logger.info(f'按 {field}:{keyword} 筛选，共 {len(contests)} 条数据')
-    
-    # 处理竞赛数据
-    from contesttrace.core.utils.data_processor import DataProcessor
-    data_processor = DataProcessor()
-    processed_contests = []
-    for contest in contests:
-        processed_contest = data_processor.process_contest(contest)
-        processed_contests.append(processed_contest)
-    
-    # 导出到前端
-    exporter = ContestExporter()
-    export_path = exporter.export_to_frontend(processed_contests)
-    logger.info(f"成功导出到前端: {export_path}")
+
+    # 创建前端数据目录
+    frontend_data_dir = os.path.join('contesttrace', 'frontend', 'data')
+    os.makedirs(frontend_data_dir, exist_ok=True)
+
+    # 导出到JSON文件
+    export_path = os.path.join(frontend_data_dir, 'contests.json')
+    with open(export_path, 'w', encoding='utf-8') as f:
+        json.dump(contests, f, ensure_ascii=False, indent=2)
+
+    logger.info(f"导出完成，共导出 {len(contests)} 条竞赛通知到 {export_path}")
+    logger.info(f"文件大小: {os.path.getsize(export_path)} 字节")
 
 
 def main():
