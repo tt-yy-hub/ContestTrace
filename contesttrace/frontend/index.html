@@ -196,6 +196,59 @@
         </div>
     </div>
 
+    <!-- 笔记编辑模态框 -->
+    <div class="modal" id="note-modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>竞赛笔记</h2>
+            <div class="modal-body">
+                <textarea id="note-textarea" rows="8" placeholder="在这里记录笔记..."></textarea>
+                <div class="modal-actions">
+                    <button class="save-btn">保存</button>
+                    <button class="cancel-btn">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="edit-contest-modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>编辑竞赛信息</h2>
+            <div class="modal-body">
+                <div class="edit-form-group">
+                    <label for="edit-title">标题</label>
+                    <input type="text" id="edit-title" placeholder="竞赛标题">
+                </div>
+                <div class="edit-form-group">
+                    <label for="edit-deadline">截止日期</label>
+                    <input type="text" id="edit-deadline" placeholder="如：截止日期：2026-12-31">
+                </div>
+                <div class="edit-form-group">
+                    <label for="edit-summary">摘要</label>
+                    <textarea id="edit-summary" placeholder="竞赛摘要"></textarea>
+                </div>
+                <div class="edit-form-group">
+                    <label for="edit-organizer">组织者</label>
+                    <input type="text" id="edit-organizer" placeholder="组织者">
+                </div>
+                <div class="edit-form-group">
+                    <label for="edit-participants">参赛对象</label>
+                    <input type="text" id="edit-participants" placeholder="参赛对象">
+                </div>
+                <div class="edit-form-group">
+                    <label for="edit-prize">奖项设置</label>
+                    <input type="text" id="edit-prize" placeholder="奖项设置">
+                </div>
+                <div class="modal-actions">
+                    <button class="save-btn">保存</button>
+                    <button class="reset-btn">重置</button>
+                    <button class="cancel-btn">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/utils.js"></script>
     <script src="js/data.js"></script>
