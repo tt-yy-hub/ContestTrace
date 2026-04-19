@@ -74,20 +74,27 @@ async function loadContests() {
                 
                 // 来源名称映射表
                 const sourceMap = {
-                    'hbu_gsxy_notice_spider': '工商管理学院',
-                    'hbu_jjxy_notice_spider': '经济与贸易学院',
-                    'hbu_sxy_notice_spider': '统计与数学学院',
-                    'hbu_wgyxy_notice_spider': '外国语学院',
-                    'hbu_xgch_notice_spider': '学生工作处',
-                    'hbu_syjxz_notice_spider': '实验教学中心',
-                    'hbu_jwc_notice_spider': '教务处',
-                    'hbu_xwcbxy_notice_spider': '新闻与传播学院',
-                    'hbu_lyjdxy_notice_spider': '旅游与酒店管理学院',
-                    'hbu_tw_notice_spider': '湖北经济学院团委',
-                    'hbu_ysxy_notice_spider': '艺术学院',
-                    'hbu_jrxy_notice_spider': '金融学院',
-                    'hbu_xxgcxy_notice_spider': '信息工程学院',
-                    'hbu_xxglxy_notice_spider': '信息管理学院'
+                    'hbue_gsxy_notice_spider': '工商管理学院',
+                    'hbue_jjxy_notice_spider': '经济与贸易学院',
+                    'hbue_sxy_notice_spider': '统计与数学学院',
+                    'hbue_wgyxy_notice_spider': '外国语学院',
+                    'hbue_xgch_notice_spider': '学生工作处',
+                    'hbue_xgc_notice_spider': '学生工作处',
+                    'hbue_syjxz_notice_spider': '实验教学中心',
+                    'hbue_etc_notice_spider': '实验教学中心',
+                    'hbue_jwc_notice_spider': '教务处',
+                    'hbue_xwcb_notice_spider': '新闻与传播学院',
+                    'hbue_xwcbxy_notice_spider': '新闻与传播学院',
+                    'hbue_lyxy_notice_spider': '旅游与酒店管理学院',
+                    'hbue_lyjdxy_notice_spider': '旅游与酒店管理学院',
+                    'hbue_tw_notice_spider': '湖北经济学院团委',
+                    'hbue_ysxy_notice_spider': '艺术学院',
+                    'hbue_jrxy_notice_spider': '金融学院',
+                    'hbue_xxgcxy_notice_spider': '信息工程学院',
+                    'hbue_ie_notice_spider': '信息工程学院',
+                    'hbue_xxglxy_notice_spider': '信息管理学院',
+                    'hbue_jmxy_notice_spider': '经济与贸易学院',
+                    'hbue_tsxy_notice_spider': '统计与数学学院'
                 };
                 
                 // 处理数据格式，确保字段名与前端代码匹配
