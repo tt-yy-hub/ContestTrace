@@ -232,7 +232,7 @@ def filter_raw_to_competition():
     # 处理汇总的原始数据库
     logger.info("开始处理汇总原始数据库...")
     raw_db_path = os.path.join('data', 'contest_trace_raw.db')
-    competition_db_path = os.path.join('data', 'competiton.db')
+    competition_db_path = os.path.join('data', 'competition.db')
     process_database(raw_db_path, competition_db_path, competition_filter, data_processor)
     
     logger.info("数据库处理完成")
