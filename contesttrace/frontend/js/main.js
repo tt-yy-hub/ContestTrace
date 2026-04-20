@@ -15,6 +15,18 @@ window.addEventListener('DOMContentLoaded', async function() {
         // 存储到localStorage，供其他模块使用
         saveToLocalStorage('all_contests', allContests);
         
+        // 检查是否有 URL 参数指定竞赛ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const contestId = urlParams.get('contestId');
+        if (contestId) {
+            const contest = allContests.find(c => c.id == contestId);
+            if (contest) {
+                openContestModal(contest);
+                // 清除 URL 参数，避免刷新后重复打开
+                history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+        
         // 初始化页面
         initSearch();
         initContestList();
@@ -386,41 +398,11 @@ function createContestCard(contest) {
             <button class="action-btn useless-btn" data-id="${contest.id}">
                 <i class="far fa-thumbs-down"></i> 无用
             </button>
+            <button class="action-btn poster-btn" data-id="${contest.id}">
+                <i class="fas fa-camera"></i> 海报
+            </button>
         </div>
-        <div class="expandable-info" style="display: none;">
-            <div class="info-row">
-                <div class="info-item">
-                    <span class="info-label">参赛对象：</span>
-                    <span class="info-value">${displayContest.participants || '全体学生'}</span>
-                </div>
-            </div>
-            <div class="info-row">
-                <div class="info-item">
-                    <span class="info-label">奖项设置：</span>
-                    <span class="info-value">${displayContest.prize || '未知'}</span>
-                </div>
-            </div>
-            <div class="tags">
-                ${tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
-            </div>
-        </div>
-        <button class="expand-btn">展开</button>
     `;
-    
-    // 展开/折叠功能
-    const expandBtn = card.querySelector('.expand-btn');
-    const expandableInfo = card.querySelector('.expandable-info');
-    
-    expandBtn.addEventListener('click', function(e) {
-        e.stopPropagation(); // 阻止事件冒泡，避免触发卡片点击事件
-        if (expandableInfo.style.display === 'none') {
-            expandableInfo.style.display = 'block';
-            expandBtn.textContent = '收起';
-        } else {
-            expandableInfo.style.display = 'none';
-            expandBtn.textContent = '展开';
-        }
-    });
     
     // 收藏按钮事件
     const favoriteBtn = card.querySelector('.favorite-btn');
@@ -492,6 +474,15 @@ function createContestCard(contest) {
             resetCustomization(contest.id);
             // 更新卡片上的信息
             updateCard(contest.id);
+        });
+    }
+    
+    // 海报按钮点击事件
+    const posterBtn = card.querySelector('.poster-btn');
+    if (posterBtn) {
+        posterBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            generatePoster(contest.id, card);
         });
     }
     

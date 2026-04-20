@@ -570,3 +570,265 @@ function loadAllContests() {
         return [];
     }
 }
+
+// 生成竞赛海报
+function generatePoster(contestId, cardElement) {
+    try {
+        // 获取竞赛对象
+        const contests = loadAllContests();
+        const contest = contests.find(c => c.id == contestId);
+        if (!contest) {
+            console.error('未找到竞赛:', contestId);
+            return;
+        }
+        
+        // 应用自定义数据
+        const custom = getCustomization(contestId);
+        const displayContest = applyCustomization(contest, custom);
+        
+        // 克隆卡片元素
+        const cardClone = cardElement.cloneNode(true);
+        cardClone.style.width = '600px';
+        cardClone.style.backgroundColor = '#ffffff';
+        cardClone.style.background = '#ffffff';
+        cardClone.style.padding = '30px';
+        cardClone.style.border = '1px solid #ddd';
+        cardClone.style.borderRadius = '16px';
+        cardClone.style.boxShadow = 'none';
+        cardClone.style.fontSize = '16px';
+        cardClone.style.webkitFontSmoothing = 'antialiased';
+        cardClone.style.mozOsxFontSmoothing = 'grayscale';
+        cardClone.style.textRendering = 'optimizeLegibility';
+        cardClone.style.color = '#000000';
+        
+        // 添加纯白底层
+        const whiteBackground = document.createElement('div');
+        whiteBackground.style.position = 'absolute';
+        whiteBackground.style.top = '0';
+        whiteBackground.style.left = '0';
+        whiteBackground.style.width = '100%';
+        whiteBackground.style.height = '100%';
+        whiteBackground.style.backgroundColor = '#ffffff';
+        whiteBackground.style.zIndex = '-1';
+        cardClone.style.position = 'relative';
+        cardClone.insertBefore(whiteBackground, cardClone.firstChild);
+        
+        // 调整字体大小和颜色
+        const titleElement = cardClone.querySelector('h3');
+        if (titleElement) {
+            titleElement.style.fontSize = '24px';
+            titleElement.style.lineHeight = '1.4';
+            titleElement.style.webkitFontSmoothing = 'antialiased';
+            titleElement.style.textRendering = 'optimizeLegibility';
+            titleElement.style.color = '#000000';
+            titleElement.style.background = 'none';
+        }
+        
+        const metaElement = cardClone.querySelector('.meta');
+        if (metaElement) {
+            metaElement.style.fontSize = '14px';
+            metaElement.style.webkitFontSmoothing = 'antialiased';
+            metaElement.style.textRendering = 'optimizeLegibility';
+            metaElement.style.color = '#000000';
+            metaElement.style.background = 'none';
+        }
+        
+        const summaryElement = cardClone.querySelector('.summary');
+        if (summaryElement) {
+            summaryElement.style.fontSize = '16px';
+            summaryElement.style.lineHeight = '1.6';
+            summaryElement.style.webkitFontSmoothing = 'antialiased';
+            summaryElement.style.textRendering = 'optimizeLegibility';
+            summaryElement.style.color = '#000000';
+            summaryElement.style.background = 'none';
+        }
+        
+        const deadlineElement = cardClone.querySelector('.deadline');
+        if (deadlineElement) {
+            deadlineElement.style.fontSize = '16px';
+            deadlineElement.style.webkitFontSmoothing = 'antialiased';
+            deadlineElement.style.textRendering = 'optimizeLegibility';
+            deadlineElement.style.color = '#ff0000';
+            deadlineElement.style.background = 'none';
+        }
+        
+        // 确保所有按钮和文本元素都有平滑字体和纯色背景
+        const allElements = cardClone.querySelectorAll('*');
+        allElements.forEach(element => {
+            element.style.webkitFontSmoothing = 'antialiased';
+            element.style.textRendering = 'optimizeLegibility';
+            element.style.background = 'none';
+            element.style.backgroundColor = 'transparent';
+            element.style.boxShadow = 'none';
+            // 确保文本元素为黑色
+            if (element.tagName === 'P' || element.tagName === 'SPAN' || element.tagName === 'H3' || element.tagName === 'H4' || element.tagName === 'H5' || element.tagName === 'H6') {
+                element.style.color = '#000000';
+            }
+        });
+        
+        // 创建二维码容器
+        const qrContainer = document.createElement('div');
+        qrContainer.style.marginTop = '30px';
+        qrContainer.style.display = 'flex';
+        qrContainer.style.flexDirection = 'column';
+        qrContainer.style.alignItems = 'center';
+        qrContainer.id = 'qr-code-container';
+        
+        // 生成二维码内容（指向中转页面）
+        const qrContent = window.location.origin + '/poster-redirect.html?contestId=' + contestId + '&name=' + encodeURIComponent(displayContest.title || '竞赛');
+        
+        // 生成二维码
+        new QRCode(qrContainer, {
+            text: qrContent,
+            width: 160,
+            height: 160,
+            colorDark: '#000000',
+            colorLight: '#ffffff',
+            correctLevel: QRCode.CorrectLevel.H
+        });
+        
+        // 添加扫码提示文字
+        const qrText = document.createElement('p');
+        qrText.textContent = '微信/QQ 扫码即可查看竞赛详情';
+        qrText.style.marginTop = '15px';
+        qrText.style.fontSize = '14px';
+        qrText.style.color = '#000000';
+        qrText.style.textAlign = 'center';
+        qrText.style.webkitFontSmoothing = 'antialiased';
+        qrText.style.textRendering = 'optimizeLegibility';
+        qrText.style.background = 'none';
+        qrContainer.appendChild(qrText);
+        
+        // 添加二维码到克隆卡片
+        cardClone.appendChild(qrContainer);
+        
+        // 添加平台logo和标题
+        const header = document.createElement('div');
+        header.style.textAlign = 'center';
+        header.style.marginBottom = '30px';
+        header.style.paddingBottom = '15px';
+        header.style.borderBottom = '1px solid #000000';
+        header.style.background = 'none';
+        
+        const logoText = document.createElement('h3');
+        logoText.textContent = '学科竞赛信息聚合平台';
+        logoText.style.color = '#000000';
+        logoText.style.margin = '0 0 15px 0';
+        logoText.style.fontSize = '28px';
+        logoText.style.webkitFontSmoothing = 'antialiased';
+        logoText.style.textRendering = 'optimizeLegibility';
+        logoText.style.background = 'none';
+        
+        header.appendChild(logoText);
+        cardClone.insertBefore(header, cardClone.firstChild);
+        
+        // 临时添加到页面
+        document.body.appendChild(cardClone);
+        cardClone.style.position = 'absolute';
+        cardClone.style.left = '-9999px';
+        
+        // 渲染为图片
+        html2canvas(cardClone, {
+            useCORS: true,
+            scale: 4,
+            logging: false,
+            backgroundColor: '#ffffff',
+            allowTaint: false,
+            letterRendering: true,
+            imageSmoothingEnabled: true,
+            foreignObjectRendering: false
+        }).then(canvas => {
+            console.log('Canvas尺寸:', canvas.width, 'x', canvas.height);
+            // 创建下载链接
+            const link = document.createElement('a');
+            link.download = `contest_poster_${contestId}_${Date.now()}.png`;
+            link.href = canvas.toDataURL('image/png', 1.0);
+            link.click();
+            
+            // 清理临时元素
+            document.body.removeChild(cardClone);
+        }).catch(error => {
+            console.error('生成海报失败:', error);
+            document.body.removeChild(cardClone);
+        });
+    } catch (e) {
+        console.error('生成海报失败:', e);
+    }
+}
+
+// 导出收藏数据为JSON
+function exportDataToJSON() {
+    try {
+        // 收集数据
+        const data = {
+            exportTime: new Date().toISOString(),
+            favorites: getFromLocalStorage('contest_favorites', []),
+            notes: getFromLocalStorage('contest_notes', {}),
+            progress: getFromLocalStorage('contest_progress', {}),
+            customizations: getFromLocalStorage('contest_customizations', {})
+        };
+        
+        // 生成JSON字符串
+        const jsonString = JSON.stringify(data, null, 2);
+        
+        // 创建Blob并下载
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `contest_data_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.json`;
+        link.click();
+        
+        // 清理
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (e) {
+        console.error('导出JSON失败:', e);
+    }
+}
+
+// 导出收藏数据为CSV
+function exportDataToCSV() {
+    try {
+        const favorites = getFromLocalStorage('contest_favorites', []);
+        const notes = getFromLocalStorage('contest_notes', {});
+        const progress = getFromLocalStorage('contest_progress', {});
+        const customizations = getFromLocalStorage('contest_customizations', {});
+        
+        // CSV表头
+        const headers = ['标题', '来源', '发布时间', '截止日期', '组织者', '参赛对象', '奖项设置', '笔记', '进度', '自定义标题', '自定义截止日期'];
+        
+        // 生成CSV内容
+        let csvContent = headers.join(',') + '\n';
+        
+        favorites.forEach(contest => {
+            const custom = customizations[contest.id] || {};
+            const row = [
+                `"${(custom.title || contest.title || '').replace(/"/g, '""')}"`,
+                `"${(contest.source || '').replace(/"/g, '""')}"`,
+                `"${(contest.publish_time || '').replace(/"/g, '""')}"`,
+                `"${(custom.deadline || contest.deadline || '').replace(/"/g, '""')}"`,
+                `"${(contest.organizer || '').replace(/"/g, '""')}"`,
+                `"${(contest.participants || '').replace(/"/g, '""')}"`,
+                `"${(contest.prize || '').replace(/"/g, '""')}"`,
+                `"${(notes[contest.id] || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`,
+                `"${(progress[contest.id] || '').replace(/"/g, '""')}"`,
+                `"${(custom.title || '').replace(/"/g, '""')}"`,
+                `"${(custom.deadline || '').replace(/"/g, '""')}"`
+            ];
+            csvContent += row.join(',') + '\n';
+        });
+        
+        // 创建Blob并下载
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `contest_data_${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`;
+        link.click();
+        
+        // 清理
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+    } catch (e) {
+        console.error('导出CSV失败:', e);
+    }
+}
