@@ -667,7 +667,7 @@ function initModal() {
 }
 
 // 打开竞赛详情模态框
-function openContestModal(contest) {
+window.openContestModal = function(contest) {
     const modal = document.getElementById('contest-modal');
     
     if (!modal) {

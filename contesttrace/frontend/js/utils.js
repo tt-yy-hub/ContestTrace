@@ -338,12 +338,29 @@ function getCustomization(contestId) {
 function setCustomization(contestId, fields) {
     try {
         const customData = getFromLocalStorage('contest_customizations', {});
+        const oldCustom = customData[contestId] || {};
+        
+        // 检查截止日期是否发生变化
+        const oldDeadline = oldCustom.deadline;
+        const newDeadline = fields.deadline;
+        const deadlineChanged = newDeadline && newDeadline !== oldDeadline;
+        
         if (!customData[contestId]) {
             customData[contestId] = {};
         }
         Object.assign(customData[contestId], fields);
         customData[contestId].reset = false;
         saveToLocalStorage('contest_customizations', customData);
+        
+        // 如果截止日期发生变化，清除提醒标记
+        if (deadlineChanged) {
+            const remindedFlags = getFromLocalStorage('reminded_flags', {});
+            if (remindedFlags[contestId]) {
+                delete remindedFlags[contestId];
+                saveToLocalStorage('reminded_flags', remindedFlags);
+            }
+        }
+        
         return true;
     } catch (e) {
         console.error('保存自定义数据失败:', e);
@@ -357,6 +374,14 @@ function resetCustomization(contestId) {
         const customData = getFromLocalStorage('contest_customizations', {});
         delete customData[contestId];
         saveToLocalStorage('contest_customizations', customData);
+        
+        // 清除提醒标记
+        const remindedFlags = getFromLocalStorage('reminded_flags', {});
+        if (remindedFlags[contestId]) {
+            delete remindedFlags[contestId];
+            saveToLocalStorage('reminded_flags', remindedFlags);
+        }
+        
         return true;
     } catch (e) {
         console.error('重置自定义数据失败:', e);

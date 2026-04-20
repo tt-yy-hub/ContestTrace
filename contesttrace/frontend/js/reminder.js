@@ -4,6 +4,30 @@
 
 let reminderInterval = null;
 
+// 计算剩余天数
+function calculateDaysLeft(deadline) {
+    if (!deadline) return null;
+    
+    // 移除截止日期前缀
+    const cleanDeadline = deadline.replace('截止日期：', '').replace('活动日期：', '');
+    
+    // 解析日期并设置为当天的00:00:00
+    const deadlineDate = new Date(cleanDeadline);
+    deadlineDate.setHours(0, 0, 0, 0);
+    
+    // 获取今天的00:00:00
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // 计算时间差（毫秒）
+    const timeDiff = deadlineDate - today;
+    
+    // 转换为天数
+    const daysLeft = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+    
+    return daysLeft;
+}
+
 // 页面加载完成后初始化
 window.addEventListener('DOMContentLoaded', function() {
     // 启动提醒检查
@@ -59,9 +83,13 @@ function checkDeadlines() {
     
     // 检查每个收藏的竞赛
     favorites.forEach(contest => {
-        if (!contest.deadline) return;
+        // 应用自定义数据
+        const custom = getCustomization(contest.id);
+        const displayContest = applyCustomization(contest, custom);
         
-        const daysLeft = calculateDaysLeft(contest.deadline);
+        if (!displayContest.deadline) return;
+        
+        const daysLeft = calculateDaysLeft(displayContest.deadline);
         
         // 只提醒剩余3天、1天、0天的竞赛
         const reminderDays = [3, 1, 0];
@@ -75,7 +103,7 @@ function checkDeadlines() {
             
             if (!remindedFlags[contestId][daysLeft.toString()]) {
                 // 发送通知
-                sendDeadlineNotification(contest, daysLeft);
+                sendDeadlineNotification(displayContest, daysLeft);
                 
                 // 标记为已提醒
                 remindedFlags[contestId][daysLeft.toString()] = true;
@@ -136,6 +164,55 @@ function sendDeadlineNotification(contest, daysLeft) {
     notification.onclick = function() {
         window.open('index.html', '_self');
     };
+    
+    // 保存提醒历史
+    saveReminderHistory(contest, daysLeft);
+}
+
+// 保存提醒历史
+function saveReminderHistory(contest, daysLeft) {
+    try {
+        // 获取现有历史记录
+        let history = getFromLocalStorage('reminder_history', []);
+        
+        // 创建新记录
+        const now = new Date();
+        const newRecord = {
+            id: `${now.getTime()}_${contest.id}`,
+            contestId: contest.id.toString(),
+            contestTitle: contest.title,
+            remindDate: now.toLocaleString('zh-CN'),
+            daysLeft: daysLeft,
+            read: false
+        };
+        
+        // 添加到历史记录
+        history.unshift(newRecord);
+        
+        // 清理30天前的记录
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        history = history.filter(record => {
+            const recordDate = new Date(record.remindDate);
+            return recordDate >= thirtyDaysAgo;
+        });
+        
+        // 限制最多100条记录
+        if (history.length > 100) {
+            history = history.slice(0, 100);
+        }
+        
+        // 保存回localStorage
+        saveToLocalStorage('reminder_history', history);
+        
+        // 尝试更新未读数量（如果UI已加载）
+        if (typeof updateUnreadCount === 'function') {
+            updateUnreadCount();
+        }
+    } catch (error) {
+        console.error('保存提醒历史失败:', error);
+    }
 }
 
 // 监听 localStorage 变化，更新提醒状态

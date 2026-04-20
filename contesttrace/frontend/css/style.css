@@ -119,11 +119,150 @@ body {
     left: 100%;
 }
 
-.nav a:hover,
-.nav a.active {
+.nav a:hover, .nav a.active {
     background-color: rgba(255,255,255,0.2);
     transform: translateY(-3px);
     box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+}
+
+/* 提醒铃铛样式 */
+.reminder-bell-container {
+    position: relative;
+    list-style: none;
+    margin-left: 15px;
+    display: flex;
+    align-items: center;
+}
+
+#reminder-bell {
+    font-size: 1.4rem;
+    margin-left: 15px;
+    cursor: pointer;
+    color: #ffffff;
+    transition: all 0.3s ease;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    padding: 8px;
+}
+
+#reminder-bell:hover {
+    transform: scale(1.1);
+    opacity: 0.9;
+}
+
+/* 未读数量小红点 */
+.unread-badge {
+    position: absolute;
+    top: -8px;
+    right: 12px;
+    background: red;
+    color: white;
+    border-radius: 50%;
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    min-width: 18px;
+    text-align: center;
+}
+
+/* 提醒历史弹窗 */
+.reminder-panel {
+    width: 350px;
+    position: absolute;
+    right: 20px;
+    top: 60px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    z-index: 1000;
+    max-height: 400px;
+    overflow: hidden;
+    display: none;
+}
+
+.reminder-panel-header {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    background-color: #f8f9fa;
+}
+
+.reminder-panel-header h3 {
+    margin: 0;
+    font-size: 16px;
+    color: #333;
+}
+
+.reminder-list {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.reminder-item {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.reminder-item:hover {
+    background-color: #f0f7ff;
+}
+
+.reminder-item.unread {
+    background-color: #f0f7ff;
+    font-weight: 500;
+}
+
+.reminder-title {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #333;
+}
+
+.reminder-meta {
+    font-size: 12px;
+    color: #666;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.no-reminders {
+    padding: 40px 20px;
+    text-align: center;
+    color: #999;
+    font-size: 14px;
+}
+
+.reminder-pagination {
+    padding: 8px;
+    text-align: center;
+    border-top: 1px solid #eee;
+    background-color: #f8f9fa;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.reminder-pagination button {
+    padding: 4px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+.reminder-pagination button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.reminder-pagination span {
+    font-size: 12px;
+    color: #666;
 }
 
 /* 搜索栏 */
@@ -1373,6 +1512,130 @@ body {
     transform: translateY(-2px);
 }
 
+/* 登录模态框样式 */
+.login-modal-content {
+    max-width: 400px;
+    padding: 0;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.login-modal-container {
+    padding: 30px;
+}
+
+.login-modal-container h2 {
+    text-align: center;
+    margin-bottom: 25px;
+    color: #333;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+}
+
+.login-modal-container h2 i {
+    color: #667eea;
+}
+
+.login-modal-container .form-group {
+    margin-bottom: 20px;
+}
+
+.login-modal-container .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #555;
+}
+
+.login-modal-container .form-group input {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.login-modal-container .form-group input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.btn-primary-gradient {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-primary-gradient:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.login-modal-container .error-message {
+    color: #e74c3c;
+    margin-top: 10px;
+    text-align: center;
+    font-size: 13px;
+    min-height: 20px;
+}
+
+.login-modal-container .success-message {
+    color: #27ae60;
+    margin-top: 10px;
+    text-align: center;
+    font-size: 13px;
+    min-height: 20px;
+}
+
+.login-modal-container .toggle-form {
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #eee;
+}
+
+.login-modal-container .toggle-form a {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.login-modal-container .toggle-form a:hover {
+    text-decoration: underline;
+}
+
+#close-login-modal {
+    position: absolute;
+    right: 15px;
+    top: 10px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #999;
+    cursor: pointer;
+    z-index: 10;
+}
+
+#close-login-modal:hover {
+    color: #333;
+}
+
 /* 日历样式 */
 #calendar {
     height: 600px;
@@ -1555,20 +1818,37 @@ body {
     color: #aaa !important;
 }
 
-/* 今天高亮 */
+/* 今天高亮 - 柔和浅蓝色圆形 */
 .fc .fc-day-today {
-    background-color: rgba(102, 126, 234, 0.1) !important;
+    background-color: #e6f7ff !important;
+    border-radius: 8px;
 }
 
 .fc .fc-day-today .fc-daygrid-day-number {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
     color: white !important;
     border-radius: 50% !important;
-    width: 32px !important;
-    height: 32px !important;
+    width: 36px !important;
+    height: 36px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    margin: 4px auto !important;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4) !important;
+    font-weight: bold !important;
+}
+
+.fc .fc-day-today:hover .fc-daygrid-day-number {
+    transform: scale(1.1) !important;
+    transition: transform 0.2s ease !important;
+}
+
+/* 今天标题（周视图/日视图） */
+.fc .fc-day-today.fc-col-header-cell-cushion {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+    border-radius: 20px !important;
+    padding: 6px 16px !important;
 }
 
 /* 事件样式 */
