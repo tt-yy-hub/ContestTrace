@@ -6,6 +6,8 @@
     <title>我的收藏 - 学科竞赛信息聚合平台</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs2@0.0.2/qrcode.min.js"></script>
 </head>
 <body>
     <header class="header">
@@ -19,6 +21,9 @@
                     <li><a href="stats.html"><i class="fas fa-chart-bar"></i> 数据统计</a></li>
                     <li><a href="favorites.html" class="active"><i class="fas fa-star"></i> 我的收藏</a></li>
                     <li><a href="calendar.html"><i class="fas fa-calendar"></i> 竞赛日历</a></li>
+                    <li class="reminder-bell-container">
+                        <i class="fas fa-bell" id="reminder-bell"></i>
+                    </li>
                 </ul>
             </nav>
         </div>
@@ -33,6 +38,8 @@
                     <button id="enable-notifications"><i class="fas fa-bell"></i> 开启通知提醒</button>
                     <button id="disable-notifications"><i class="fas fa-bell-slash"></i> 关闭通知提醒</button>
                     <button id="clear-favorites"><i class="fas fa-trash"></i> 清空所有收藏</button>
+                    <button id="export-json-btn"><i class="fas fa-file-export"></i> 导出 JSON</button>
+                    <button id="export-csv-btn"><i class="fas fa-file-csv"></i> 导出 CSV</button>
                 </div>
             </div>
         </section>
@@ -199,12 +206,66 @@
         </div>
     </div>
 
+    <!-- 笔记编辑模态框 -->
+    <div class="modal" id="note-modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>竞赛笔记</h2>
+            <div class="modal-body">
+                <textarea id="note-textarea" rows="8" placeholder="在这里记录笔记..."></textarea>
+                <div class="modal-actions">
+                    <button class="save-btn">保存</button>
+                    <button class="cancel-btn">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="edit-contest-modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>编辑竞赛信息</h2>
+            <div class="modal-body">
+                <div class="edit-form-group">
+                    <label for="edit-title">标题</label>
+                    <input type="text" id="edit-title" placeholder="竞赛标题">
+                </div>
+                <div class="edit-form-group">
+                    <label for="edit-deadline">截止日期</label>
+                    <input type="text" id="edit-deadline" placeholder="如：截止日期：2026-12-31">
+                </div>
+                <div class="edit-form-group">
+                    <label for="edit-summary">摘要</label>
+                    <textarea id="edit-summary" placeholder="竞赛摘要"></textarea>
+                </div>
+                <div class="edit-form-group">
+                    <label for="edit-organizer">组织者</label>
+                    <input type="text" id="edit-organizer" placeholder="组织者">
+                </div>
+                <div class="edit-form-group">
+                    <label for="edit-participants">参赛对象</label>
+                    <input type="text" id="edit-participants" placeholder="参赛对象">
+                </div>
+                <div class="edit-form-group">
+                    <label for="edit-prize">奖项设置</label>
+                    <input type="text" id="edit-prize" placeholder="奖项设置">
+                </div>
+                <div class="modal-actions">
+                    <button class="save-btn">保存</button>
+                    <button class="reset-btn">重置</button>
+                    <button class="cancel-btn">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="js/utils.js"></script>
     <script src="js/data.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/sync.js"></script>
     <script src="js/favorites.js"></script>
     <script src="js/reminder.js"></script>
+    <script src="js/reminder-ui.js"></script>
     <script>
         // 页面加载完成后初始化登录状态和同步按钮
         window.addEventListener('DOMContentLoaded', function() {
@@ -212,5 +273,69 @@
             addSyncButton();
         });
     </script>
+
+    <!-- 登录/注册模态框 -->
+    <div id="login-modal" class="modal" style="display: none;">
+        <div class="modal-content login-modal-content">
+            <span class="close" id="close-login-modal">&times;</span>
+            <div class="login-modal-container">
+                <div id="login-form-modal">
+                    <h2><i class="fas fa-sign-in-alt"></i> 用户登录</h2>
+                    <div class="form-group">
+                        <label for="login-username-modal">用户名</label>
+                        <input type="text" id="login-username-modal" placeholder="请输入用户名">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password-modal">密码</label>
+                        <input type="password" id="login-password-modal" placeholder="请输入密码">
+                    </div>
+                    <button class="btn btn-primary-gradient" id="login-button-modal">
+                        <i class="fas fa-sign-in-alt"></i> 登录
+                    </button>
+                    <div class="error-message" id="login-error-modal"></div>
+                    <div class="toggle-form">
+                        还没有账号？ <a href="#" id="switch-to-register-modal">立即注册</a>
+                    </div>
+                </div>
+
+                <div id="register-form-modal" style="display: none;">
+                    <h2><i class="fas fa-user-plus"></i> 用户注册</h2>
+                    <div class="form-group">
+                        <label for="register-username-modal">用户名</label>
+                        <input type="text" id="register-username-modal" placeholder="请输入用户名">
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password-modal">密码</label>
+                        <input type="password" id="register-password-modal" placeholder="请输入密码">
+                    </div>
+                    <div class="form-group">
+                        <label for="register-confirm-password-modal">确认密码</label>
+                        <input type="password" id="register-confirm-password-modal" placeholder="请再次输入密码">
+                    </div>
+                    <button class="btn btn-primary-gradient" id="register-button-modal">
+                        <i class="fas fa-user-plus"></i> 注册
+                    </button>
+                    <div class="error-message" id="register-error-modal"></div>
+                    <div class="success-message" id="register-success-modal"></div>
+                    <div class="toggle-form">
+                        已有账号？ <a href="#" id="switch-to-login-modal">立即登录</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 提醒历史弹窗 -->
+    <div id="reminder-panel" class="reminder-panel">
+        <div class="reminder-panel-header">
+            <h3>通知列表</h3>
+        </div>
+        <div id="reminder-list" class="reminder-list"></div>
+        <div id="reminder-pagination" class="reminder-pagination">
+            <button id="reminder-prev">上一页</button>
+            <span id="reminder-page-info">第 1 页，共 0 页</span>
+            <button id="reminder-next">下一页</button>
+        </div>
+    </div>
 </body>
 </html>

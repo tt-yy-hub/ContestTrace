@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>扫码跳转 - 学科竞赛信息聚合平台</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .redirect-container {
+            max-width: 500px;
+            margin: 100px auto;
+            padding: 30px;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .redirect-container h2 {
+            color: #2193b0;
+            margin-bottom: 20px;
+        }
+        .redirect-container p {
+            margin-bottom: 30px;
+            font-size: 16px;
+            color: #555;
+            line-height: 1.6;
+        }
+        .redirect-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .redirect-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .redirect-btn.primary {
+            background: linear-gradient(135deg, #2193b0, #6dd5ed);
+            color: white;
+        }
+        .redirect-btn.primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(33, 147, 176, 0.3);
+        }
+        .redirect-btn.secondary {
+            background: #f8f9fa;
+            color: #2193b0;
+            border: 1px solid #2193b0;
+        }
+        .redirect-btn.secondary:hover {
+            background: #e3f2fd;
+            transform: translateY(-2px);
+        }
+        .logo {
+            margin-bottom: 30px;
+        }
+        .logo h1 {
+            color: #2193b0;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="redirect-container">
+        <div class="logo">
+            <h1>学科竞赛信息聚合平台</h1>
+        </div>
+        <h2>扫码跳转确认</h2>
+        <p>您扫描了 <span id="contest-name" style="font-weight: bold; color: #2193b0;">竞赛名称</span> 的海报，即将跳转到竞赛详情页。</p>
+        <div class="redirect-buttons">
+            <button class="redirect-btn primary" id="open-detail">
+                <i class="fas fa-external-link-alt"></i> 打开竞赛详情
+            </button>
+            <button class="redirect-btn secondary" id="back-home">
+                <i class="fas fa-home"></i> 返回首页
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 获取URL参数
+        function getUrlParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+        // 获取竞赛ID
+        const contestId = getUrlParam('contestId');
+        const contestName = getUrlParam('name') || '竞赛';
+
+        // 更新竞赛名称
+        document.getElementById('contest-name').textContent = contestName;
+
+        // 绑定按钮事件
+        document.getElementById('open-detail').addEventListener('click', function() {
+            // 跳转到竞赛详情页
+            window.location.href = `index.html?contestId=${contestId}`;
+        });
+
+        document.getElementById('back-home').addEventListener('click', function() {
+            // 返回首页
+            window.location.href = 'index.html';
+        });
+
+        // 如果没有竞赛ID，返回首页
+        if (!contestId) {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

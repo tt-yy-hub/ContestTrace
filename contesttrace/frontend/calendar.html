@@ -68,6 +68,9 @@
                     <li><a href="stats.html"><i class="fas fa-chart-bar"></i> 数据统计</a></li>
                     <li><a href="favorites.html"><i class="fas fa-star"></i> 我的收藏</a></li>
                     <li><a href="calendar.html" class="active"><i class="fas fa-calendar"></i> 竞赛日历</a></li>
+                    <li class="reminder-bell-container">
+                        <i class="fas fa-bell" id="reminder-bell"></i>
+                    </li>
                 </ul>
             </nav>
         </div>
@@ -181,11 +184,77 @@
     <script src="js/data.js"></script>
     <script src="js/auth.js"></script>
     <script src="js/calendar.js"></script>
+    <script src="js/reminder.js"></script>
+    <script src="js/reminder-ui.js"></script>
     <script>
         // 页面加载完成后初始化登录状态
         window.addEventListener('DOMContentLoaded', function() {
             initNavbarLoginStatus();
         });
     </script>
+
+    <!-- 登录/注册模态框 -->
+    <div id="login-modal" class="modal" style="display: none;">
+        <div class="modal-content login-modal-content">
+            <span class="close" id="close-login-modal">&times;</span>
+            <div class="login-modal-container">
+                <div id="login-form-modal">
+                    <h2><i class="fas fa-sign-in-alt"></i> 用户登录</h2>
+                    <div class="form-group">
+                        <label for="login-username-modal">用户名</label>
+                        <input type="text" id="login-username-modal" placeholder="请输入用户名">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password-modal">密码</label>
+                        <input type="password" id="login-password-modal" placeholder="请输入密码">
+                    </div>
+                    <button class="btn btn-primary-gradient" id="login-button-modal">
+                        <i class="fas fa-sign-in-alt"></i> 登录
+                    </button>
+                    <div class="error-message" id="login-error-modal"></div>
+                    <div class="toggle-form">
+                        还没有账号？ <a href="#" id="switch-to-register-modal">立即注册</a>
+                    </div>
+                </div>
+
+                <div id="register-form-modal" style="display: none;">
+                    <h2><i class="fas fa-user-plus"></i> 用户注册</h2>
+                    <div class="form-group">
+                        <label for="register-username-modal">用户名</label>
+                        <input type="text" id="register-username-modal" placeholder="请输入用户名">
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password-modal">密码</label>
+                        <input type="password" id="register-password-modal" placeholder="请输入密码">
+                    </div>
+                    <div class="form-group">
+                        <label for="register-confirm-password-modal">确认密码</label>
+                        <input type="password" id="register-confirm-password-modal" placeholder="请再次输入密码">
+                    </div>
+                    <button class="btn btn-primary-gradient" id="register-button-modal">
+                        <i class="fas fa-user-plus"></i> 注册
+                    </button>
+                    <div class="error-message" id="register-error-modal"></div>
+                    <div class="success-message" id="register-success-modal"></div>
+                    <div class="toggle-form">
+                        已有账号？ <a href="#" id="switch-to-login-modal">立即登录</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 提醒历史弹窗 -->
+    <div id="reminder-panel" class="reminder-panel">
+        <div class="reminder-panel-header">
+            <h3>通知列表</h3>
+        </div>
+        <div id="reminder-list" class="reminder-list"></div>
+        <div id="reminder-pagination" class="reminder-pagination">
+            <button id="reminder-prev">上一页</button>
+            <span id="reminder-page-info">第 1 页，共 0 页</span>
+            <button id="reminder-next">下一页</button>
+        </div>
+    </div>
 </body>
 </html>

@@ -102,6 +102,18 @@ function initEventListeners() {
             }
         });
     }
+    
+    // 导出 JSON
+    const exportJsonBtn = document.getElementById('export-json-btn');
+    if (exportJsonBtn) {
+        exportJsonBtn.addEventListener('click', exportDataToJSON);
+    }
+    
+    // 导出 CSV
+    const exportCsvBtn = document.getElementById('export-csv-btn');
+    if (exportCsvBtn) {
+        exportCsvBtn.addEventListener('click', exportDataToCSV);
+    }
 }
 
 // 从deadline字符串中提取日期
@@ -279,7 +291,10 @@ function renderFavorites() {
         }
         
         filteredFavorites.forEach(contest => {
-            const card = createFavoriteCard(contest);
+            // 应用自定义数据
+            const custom = getCustomization(contest.id);
+            const displayContest = applyCustomization(contest, custom);
+            const card = createFavoriteCard(displayContest);
             favoriteContainer.appendChild(card);
         });
     }
@@ -289,6 +304,7 @@ function renderFavorites() {
 function createFavoriteCard(contest) {
     const card = document.createElement('div');
     card.className = 'contest-card';
+    card.dataset.id = contest.id;
     
     const daysLeft = calculateDaysLeft(contest.deadline);
     const daysLeftClass = getDaysLeftClass(daysLeft);
@@ -330,13 +346,38 @@ function createFavoriteCard(contest) {
         metaHtml += ` | <span class="competition-level">${contest.competition_level}</span>`;
     }
     
+    // 检查是否有笔记
+    const hasNote = getNote(contest.id) !== '';
+    // 获取进度
+    const progress = getProgress(contest.id);
+    // 检查并应用自定义数据
+    const custom = getCustomization(contest.id);
+    const displayContest = applyCustomization(contest, custom);
+    
     card.innerHTML = `
-        <h3>${contest.title || '无标题'}</h3>
+        <div class="card-title-area">
+            <h3>${displayContest.title || '无标题'}${custom ? '<span class="customized-badge">已编辑</span>' : ''}</h3>
+            <div class="card-actions-area">
+                <i class="fas fa-edit edit-icon" data-id="${contest.id}" title="编辑竞赛信息"></i>
+                <i class="fas fa-undo reset-icon ${custom ? '' : 'hidden'}" data-id="${contest.id}" title="恢复原始信息"></i>
+                <i class="fas fa-sticky-note note-icon ${hasNote ? 'has-note' : ''}" data-id="${contest.id}" title="${hasNote ? '编辑笔记' : '添加笔记'}"></i>
+            </div>
+        </div>
         <div class="meta">
             ${metaHtml}
         </div>
-        <p class="summary">${contest.summary || (contest.content ? contest.content.substring(0, 100) + '...' : '无摘要')}</p>
+        <p class="summary">${displayContest.summary || (displayContest.content ? displayContest.content.substring(0, 100) + '...' : '无摘要')}</p>
         ${deadlineHtml}
+        <div class="progress-section">
+            <select class="progress-select" data-id="${contest.id}">
+                <option value="未开始" ${progress === '未开始' ? 'selected' : ''}>未开始</option>
+                <option value="已报名" ${progress === '已报名' ? 'selected' : ''}>已报名</option>
+                <option value="校赛通过" ${progress === '校赛通过' ? 'selected' : ''}>校赛通过</option>
+                <option value="省赛通过" ${progress === '省赛通过' ? 'selected' : ''}>省赛通过</option>
+                <option value="国赛入围" ${progress === '国赛入围' ? 'selected' : ''}>国赛入围</option>
+                <option value="国赛获奖" ${progress === '国赛获奖' ? 'selected' : ''}>国赛获奖</option>
+            </select>
+        </div>
         <div class="card-actions">
             <button class="remove-favorite-btn" data-id="${contest.id}">
                 <i class="fas fa-trash"></i> 取消收藏
@@ -347,43 +388,11 @@ function createFavoriteCard(contest) {
             <button class="action-btn useless-btn" data-id="${contest.id}">
                 <i class="far fa-thumbs-down"></i> 无用
             </button>
+            <button class="action-btn poster-btn" data-id="${contest.id}">
+                <i class="fas fa-camera"></i> 海报
+            </button>
         </div>
-        <div class="expandable-info" style="display: none;">
-            <div class="info-row">
-                <div class="info-item">
-                    <span class="info-label">参赛对象：</span>
-                    <span class="info-value">${contest.participants || '全体学生'}</span>
-                </div>
-            </div>
-            <div class="info-row">
-                <div class="info-item">
-                    <span class="info-label">奖项设置：</span>
-                    <span class="info-value">${contest.prize || '未知'}</span>
-                </div>
-            </div>
-            <div class="tags">
-                ${tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
-            </div>
-        </div>
-        <button class="expand-btn">展开</button>
     `;
-    
-    // 展开/折叠功能
-    const expandBtn = card.querySelector('.expand-btn');
-    const expandableInfo = card.querySelector('.expandable-info');
-    
-    if (expandBtn && expandableInfo) {
-        expandBtn.addEventListener('click', function(e) {
-            e.stopPropagation(); // 阻止事件冒泡，避免触发卡片点击事件
-            if (expandableInfo.style.display === 'none') {
-                expandableInfo.style.display = 'block';
-                expandBtn.textContent = '收起';
-            } else {
-                expandableInfo.style.display = 'none';
-                expandBtn.textContent = '展开';
-            }
-        });
-    }
     
     // 取消收藏按钮事件
     const removeFavoriteBtn = card.querySelector('.remove-favorite-btn');
@@ -411,6 +420,71 @@ function createFavoriteCard(contest) {
         uselessBtn.addEventListener('click', function(e) {
             e.stopPropagation(); // 阻止事件冒泡，避免触发卡片点击事件
             alert('感谢您的反馈，我们会不断改进！');
+        });
+    }
+    
+    // 进度下拉框事件
+    const progressSelect = card.querySelector('.progress-select');
+    if (progressSelect) {
+        progressSelect.addEventListener('click', function(e) {
+            e.stopPropagation(); // 阻止点击事件冒泡
+        });
+        progressSelect.addEventListener('change', function(e) {
+            e.stopPropagation(); // 阻止change事件冒泡
+            const contestId = this.dataset.id;
+            const newStatus = this.value;
+            setProgress(contestId, newStatus);
+        });
+    }
+    
+    // 笔记图标点击事件
+    const noteIcon = card.querySelector('.note-icon');
+    if (noteIcon) {
+        noteIcon.addEventListener('click', function(e) {
+            e.stopPropagation(); // 阻止事件冒泡，避免触发卡片点击事件
+            const contestId = contest.id;
+            const currentNote = getNote(contestId);
+            openNoteModal(contestId, currentNote, function(newNote) {
+                setNote(contestId, newNote);
+                // 更新图标状态
+                if (newNote !== '') {
+                    noteIcon.classList.add('has-note');
+                } else {
+                    noteIcon.classList.remove('has-note');
+                }
+            });
+        });
+    }
+    
+    // 编辑图标点击事件
+    const editIcon = card.querySelector('.edit-icon');
+    if (editIcon) {
+        editIcon.addEventListener('click', function(e) {
+            e.stopPropagation();
+            openEditModal(contest, function() {
+                // 不再重新渲染整个列表，而是更新单个卡片
+                updateCard(contest.id);
+            });
+        });
+    }
+    
+    // 重置图标点击事件
+    const resetIcon = card.querySelector('.reset-icon');
+    if (resetIcon) {
+        resetIcon.addEventListener('click', function(e) {
+            e.stopPropagation();
+            resetCustomization(contest.id);
+            // 不再重新渲染整个列表，而是更新单个卡片
+            updateCard(contest.id);
+        });
+    }
+    
+    // 海报按钮点击事件
+    const posterBtn = card.querySelector('.poster-btn');
+    if (posterBtn) {
+        posterBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            generatePoster(contest.id, card);
         });
     }
     
@@ -444,39 +518,43 @@ function openContestModal(contest) {
         return;
     }
     
+    // 应用自定义数据
+    const custom = getCustomization(contest.id);
+    const displayContest = applyCustomization(contest, custom);
+    
     // 填充模态框内容
     const modalTitleEl = document.getElementById('modal-title');
-    if (modalTitleEl) modalTitleEl.textContent = contest.title;
+    if (modalTitleEl) modalTitleEl.textContent = displayContest.title;
     
     const modalSourceEl = document.getElementById('modal-source');
-    if (modalSourceEl) modalSourceEl.textContent = contest.source;
+    if (modalSourceEl) modalSourceEl.textContent = displayContest.source;
     
     const modalPublishTimeEl = document.getElementById('modal-publish-time');
-    if (modalPublishTimeEl) modalPublishTimeEl.textContent = formatDate(contest.publish_time);
+    if (modalPublishTimeEl) modalPublishTimeEl.textContent = formatDate(displayContest.publish_time);
     
     // 处理截止时间，为空时不显示
     const modalDeadlineEl = document.getElementById('modal-deadline');
     const deadlineInfoItem = modalDeadlineEl ? modalDeadlineEl.closest('.info-item') : null;
     if (deadlineInfoItem) {
-        if (contest.deadline) {
+        if (displayContest.deadline) {
             // 提取deadline中的标签和日期
-            if (contest.deadline.includes('活动日期')) {
+            if (displayContest.deadline.includes('活动日期')) {
                 // 找到标签元素并修改
                 const labelEl = deadlineInfoItem.querySelector('.label');
                 if (labelEl) labelEl.textContent = '活动日期：';
                 // 只显示日期部分
-                modalDeadlineEl.textContent = contest.deadline.replace('活动日期：', '');
-            } else if (contest.deadline.includes('截止日期')) {
+                modalDeadlineEl.textContent = displayContest.deadline.replace('活动日期：', '');
+            } else if (displayContest.deadline.includes('截止日期')) {
                 // 找到标签元素并修改
                 const labelEl = deadlineInfoItem.querySelector('.label');
                 if (labelEl) labelEl.textContent = '截止日期：';
                 // 只显示日期部分
-                modalDeadlineEl.textContent = contest.deadline.replace('截止日期：', '');
+                modalDeadlineEl.textContent = displayContest.deadline.replace('截止日期：', '');
             } else {
                 // 默认标签
                 const labelEl = deadlineInfoItem.querySelector('.label');
                 if (labelEl) labelEl.textContent = '截止时间：';
-                modalDeadlineEl.textContent = contest.deadline;
+                modalDeadlineEl.textContent = displayContest.deadline;
             }
             deadlineInfoItem.style.display = 'block';
         } else {
@@ -485,48 +563,51 @@ function openContestModal(contest) {
     }
     
     const modalOrganizerEl = document.getElementById('modal-organizer');
-    if (modalOrganizerEl) modalOrganizerEl.textContent = contest.organizer || '未知';
+    if (modalOrganizerEl) modalOrganizerEl.textContent = displayContest.organizer || '未知';
     
     const modalParticipantsEl = document.getElementById('modal-participants');
-    if (modalParticipantsEl) modalParticipantsEl.textContent = contest.participants || '未知';
+    if (modalParticipantsEl) modalParticipantsEl.textContent = displayContest.participants || '未知';
     
     const modalPrizeEl = document.getElementById('modal-prize');
-    if (modalPrizeEl) modalPrizeEl.textContent = contest.prize || '未知';
+    if (modalPrizeEl) modalPrizeEl.textContent = displayContest.prize || '未知';
     
     const modalContactEl = document.getElementById('modal-contact');
-    if (modalContactEl) modalContactEl.textContent = contest.contact || '未知';
+    if (modalContactEl) modalContactEl.textContent = displayContest.contact || '未知';
     
     const modalContentEl = document.getElementById('modal-content');
-    if (modalContentEl) modalContentEl.textContent = contest.content || '无详细内容';
+    if (modalContentEl) modalContentEl.textContent = displayContest.content || '无详细内容';
     
     const modalUrlEl = document.getElementById('modal-url');
-    if (modalUrlEl) modalUrlEl.href = contest.url;
+    if (modalUrlEl) modalUrlEl.href = displayContest.url;
     
     // 显示模态框
     modal.style.display = 'block';
+    
+    // 设置收藏按钮状态
+    const favoriteBtn = document.getElementById('favorite-btn');
+    if (favoriteBtn) {
+        const isFav = isFavorite(contest.id);
+        favoriteBtn.innerHTML = isFav ? '<i class="fas fa-star"></i> 已收藏' : '<i class="far fa-star"></i> 收藏';
+    }
 }
 
 // 初始化模态框
 function initModal() {
-    const modal = document.getElementById('contest-modal');
-    const closeBtn = document.querySelector('.modal .close');
-    
-    if (!modal || !closeBtn) {
-        console.error('modal或closeBtn元素不存在');
-        return;
-    }
-    
-    // 关闭按钮点击事件
-    closeBtn.onclick = function() {
-        modal.style.display = 'none';
-    };
-    
-    // 点击模态框外部关闭
-    modal.onclick = function(event) {
-        if (event.target === modal) {
-            modal.style.display = 'none';
+    // 为所有模态框绑定关闭按钮事件
+    document.querySelectorAll('.modal').forEach(modal => {
+        const closeBtn = modal.querySelector('.close');
+        if (closeBtn) {
+            closeBtn.onclick = function(e) {
+                e.stopPropagation();
+                modal.style.display = 'none';
+            };
         }
-    };
+        modal.onclick = function(event) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        };
+    });
     
     // 收藏按钮
     const favoriteBtn = document.getElementById('favorite-btn');
@@ -539,7 +620,19 @@ function initModal() {
             if (contest) {
                 toggleFavorite(contest.id, contest);
                 this.innerHTML = isFavorite(contest.id) ? '<i class="fas fa-star"></i> 已收藏' : '<i class="far fa-star"></i> 收藏';
-                renderFavorites();
+                
+                // 更新卡片上的取消收藏按钮状态
+                const card = document.querySelector(`.contest-card[data-id="${contest.id}"]`);
+                if (card) {
+                    const unfavoriteBtn = card.querySelector('.unfavorite-btn');
+                    if (unfavoriteBtn) {
+                        if (isFavorite(contest.id)) {
+                            unfavoriteBtn.textContent = '取消收藏';
+                        } else {
+                            unfavoriteBtn.textContent = '收藏';
+                        }
+                    }
+                }
             }
         };
     }

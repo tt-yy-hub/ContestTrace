@@ -6,7 +6,135 @@
 window.addEventListener('DOMContentLoaded', function() {
     initAuthForm();
     initNavbarLoginStatus();
+    initLoginModal();
 });
+
+// 初始化登录模态框
+function initLoginModal() {
+    // 切换到注册表单
+    const switchToRegister = document.getElementById('switch-to-register-modal');
+    if (switchToRegister) {
+        switchToRegister.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('login-form-modal').style.display = 'none';
+            document.getElementById('register-form-modal').style.display = 'block';
+        });
+    }
+
+    // 切换到登录表单
+    const switchToLogin = document.getElementById('switch-to-login-modal');
+    if (switchToLogin) {
+        switchToLogin.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.getElementById('register-form-modal').style.display = 'none';
+            document.getElementById('login-form-modal').style.display = 'block';
+        });
+    }
+
+    // 登录按钮点击事件
+    const loginButton = document.getElementById('login-button-modal');
+    if (loginButton) {
+        loginButton.addEventListener('click', function() {
+            const username = document.getElementById('login-username-modal').value.trim();
+            const password = document.getElementById('login-password-modal').value;
+            const errorElement = document.getElementById('login-error-modal');
+
+            if (!username || !password) {
+                errorElement.textContent = '用户名和密码不能为空';
+                return;
+            }
+
+            login(username, password).then(success => {
+                if (success) {
+                    closeLoginModal();
+                    location.reload();
+                } else {
+                    errorElement.textContent = '用户名或密码错误';
+                }
+            });
+        });
+    }
+
+    // 注册按钮点击事件
+    const registerButton = document.getElementById('register-button-modal');
+    if (registerButton) {
+        registerButton.addEventListener('click', function() {
+            const username = document.getElementById('register-username-modal').value.trim();
+            const password = document.getElementById('register-password-modal').value;
+            const confirmPassword = document.getElementById('register-confirm-password-modal').value;
+            const errorElement = document.getElementById('register-error-modal');
+            const successElement = document.getElementById('register-success-modal');
+
+            if (!username || !password || !confirmPassword) {
+                errorElement.textContent = '所有字段不能为空';
+                successElement.textContent = '';
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                errorElement.textContent = '两次输入的密码不一致';
+                successElement.textContent = '';
+                return;
+            }
+
+            register(username, password).then(success => {
+                if (success) {
+                    errorElement.textContent = '';
+                    successElement.textContent = '注册成功，请登录';
+                    setTimeout(() => {
+                        document.getElementById('register-form-modal').style.display = 'none';
+                        document.getElementById('login-form-modal').style.display = 'block';
+                        successElement.textContent = '';
+                    }, 2000);
+                } else {
+                    errorElement.textContent = '注册失败，用户名已存在';
+                    successElement.textContent = '';
+                }
+            });
+        });
+    }
+
+    // 关闭按钮点击事件
+    const closeBtn = document.getElementById('close-login-modal');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeLoginModal);
+    }
+
+    // 点击模态框外部关闭
+    const modal = document.getElementById('login-modal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeLoginModal();
+            }
+        });
+    }
+}
+
+// 打开登录模态框
+function openLoginModal() {
+    const modal = document.getElementById('login-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        // 默认显示登录表单
+        document.getElementById('login-form-modal').style.display = 'block';
+        document.getElementById('register-form-modal').style.display = 'none';
+        // 清除错误信息
+        document.getElementById('login-error-modal').textContent = '';
+        document.getElementById('register-error-modal').textContent = '';
+        document.getElementById('register-success-modal').textContent = '';
+    }
+}
+
+// 关闭登录模态框
+function closeLoginModal() {
+    const modal = document.getElementById('login-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
 
 // 初始化认证表单
 function initAuthForm() {
@@ -224,10 +352,18 @@ function initNavbarLoginStatus() {
         } else {
             // 未登录状态
             authContainer.innerHTML = `
-                <button class="login-btn" onclick="window.location.href='login.html'">
+                <button class="login-btn" id="login-btn-nav">
                     <i class="fas fa-sign-in-alt"></i> 登录/注册
                 </button>
             `;
+
+            // 添加登录按钮事件
+            setTimeout(() => {
+                const loginBtnNav = document.getElementById('login-btn-nav');
+                if (loginBtnNav) {
+                    loginBtnNav.addEventListener('click', openLoginModal);
+                }
+            }, 0);
         }
         
         // 添加到导航栏
