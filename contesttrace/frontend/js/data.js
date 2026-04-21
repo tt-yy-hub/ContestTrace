@@ -74,20 +74,27 @@ async function loadContests() {
                 
                 // 来源名称映射表
                 const sourceMap = {
-                    'hbu_gsxy_notice_spider': '工商管理学院',
-                    'hbu_jjxy_notice_spider': '经济与贸易学院',
-                    'hbu_sxy_notice_spider': '统计与数学学院',
-                    'hbu_wgyxy_notice_spider': '外国语学院',
-                    'hbu_xgch_notice_spider': '学生工作处',
-                    'hbu_syjxz_notice_spider': '实验教学中心',
-                    'hbu_jwc_notice_spider': '教务处',
-                    'hbu_xwcbxy_notice_spider': '新闻与传播学院',
-                    'hbu_lyjdxy_notice_spider': '旅游与酒店管理学院',
-                    'hbu_tw_notice_spider': '湖北经济学院团委',
-                    'hbu_ysxy_notice_spider': '艺术学院',
-                    'hbu_jrxy_notice_spider': '金融学院',
-                    'hbu_xxgcxy_notice_spider': '信息工程学院',
-                    'hbu_xxglxy_notice_spider': '信息管理学院'
+                    'hbue_gsxy_notice_spider': '工商管理学院',
+                    'hbue_jjxy_notice_spider': '经济与贸易学院',
+                    'hbue_sxy_notice_spider': '统计与数学学院',
+                    'hbue_wgyxy_notice_spider': '外国语学院',
+                    'hbue_xgch_notice_spider': '学生工作处',
+                    'hbue_xgc_notice_spider': '学生工作处',
+                    'hbue_syjxz_notice_spider': '实验教学中心',
+                    'hbue_etc_notice_spider': '实验教学中心',
+                    'hbue_jwc_notice_spider': '教务处',
+                    'hbue_xwcb_notice_spider': '新闻与传播学院',
+                    'hbue_xwcbxy_notice_spider': '新闻与传播学院',
+                    'hbue_lyxy_notice_spider': '旅游与酒店管理学院',
+                    'hbue_lyjdxy_notice_spider': '旅游与酒店管理学院',
+                    'hbue_tw_notice_spider': '湖北经济学院团委',
+                    'hbue_ysxy_notice_spider': '艺术学院',
+                    'hbue_jrxy_notice_spider': '金融学院',
+                    'hbue_xxgcxy_notice_spider': '信息工程学院',
+                    'hbue_ie_notice_spider': '信息工程学院',
+                    'hbue_xxglxy_notice_spider': '信息管理学院',
+                    'hbue_jmxy_notice_spider': '经济与贸易学院',
+                    'hbue_tsxy_notice_spider': '统计与数学学院'
                 };
                 
                 // 处理数据格式，确保字段名与前端代码匹配
@@ -184,23 +191,46 @@ function saveFavorites(favorites) {
 
 // 加载收藏的竞赛
 function loadFavorites() {
-    return getFromLocalStorage('contest_favorites', []);
+    const favorites = getFromLocalStorage('contest_favorites', []);
+    // 过滤掉无效的收藏（没有id或没有title的对象）
+    if (Array.isArray(favorites)) {
+        // 去重：以id为key，保留最后一个（最新添加的）
+        const seen = new Map();
+        const validFavorites = favorites.filter(fav => fav && fav.id && fav.title);
+        return validFavorites.filter(fav => {
+            const key = String(fav.id);
+            if (seen.has(key)) {
+                return false;
+            }
+            seen.set(key, true);
+            return true;
+        });
+    }
+    return [];
 }
 
 // 检查竞赛是否已收藏
-function isFavorite(contestUrl) {
+function isFavorite(contestId) {
     const favorites = loadFavorites();
-    return favorites.includes(contestUrl);
+    // 确保contestId是字符串类型进行比较
+    return favorites.some(fav => String(fav.id) === String(contestId));
 }
 
 // 切换收藏状态
-function toggleFavorite(contestUrl) {
+function toggleFavorite(contestId, contest) {
     let favorites = loadFavorites();
-    const index = favorites.indexOf(contestUrl);
-    if (index > -1) {
-        favorites.splice(index, 1);
+    // 确保ID类型一致
+    const contestIdStr = String(contestId);
+    
+    // 检查是否已收藏
+    const existingIndex = favorites.findIndex(fav => String(fav.id) === contestIdStr);
+    if (existingIndex > -1) {
+        // 已收藏，则移除
+        favorites.splice(existingIndex, 1);
     } else {
-        favorites.push(contestUrl);
+        // 未收藏，则添加（先去重再添加，防止重复）
+        favorites = favorites.filter(fav => String(fav.id) !== contestIdStr);
+        favorites.push(contest);
     }
     saveFavorites(favorites);
     return favorites;

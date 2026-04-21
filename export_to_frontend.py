@@ -18,7 +18,7 @@ def export_to_frontend():
     从data\competiton.db导出数据到前端需要的JSON格式
     """
     # 数据库路径
-    db_path = os.path.join('data', 'competiton.db')
+    db_path = os.path.join('data', 'competition.db')
     
     # 检查数据库是否存在
     if not os.path.exists(db_path):

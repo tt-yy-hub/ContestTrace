@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>竞赛日历 - 学科竞赛信息聚合平台</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- FullCalendar 样式 -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" rel="stylesheet">
+    <style>
+        .calendar-container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .calendar-header h2 {
+            margin: 0;
+            color: #333;
+        }
+        .filter-group {
+            margin-bottom: 20px;
+        }
+        .filter-group label {
+            margin-right: 10px;
+            font-weight: 500;
+            color: #555;
+        }
+        .filter-group select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        #calendar {
+            width: 100%;
+            min-height: 500px;
+        }
+        .calendar-loading,
+        .calendar-error {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .calendar-error {
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <h1>学科竞赛信息聚合平台</h1>
+            </div>
+            <nav class="nav">
+                <ul>
+                    <li><a href="index.html"><i class="fas fa-home"></i> 首页</a></li>
+                    <li><a href="stats.html"><i class="fas fa-chart-bar"></i> 数据统计</a></li>
+                    <li><a href="favorites.html"><i class="fas fa-star"></i> 我的收藏</a></li>
+                    <li><a href="calendar.html" class="active"><i class="fas fa-calendar"></i> 竞赛日历</a></li>
+                    <li class="reminder-bell-container">
+                        <i class="fas fa-bell" id="reminder-bell"></i>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="calendar-container">
+            <div class="calendar-header">
+                <h2>竞赛日历</h2>
+                <div class="filter-group">
+                    <label for="calendar-source-filter">来源：</label>
+                    <select id="calendar-source-filter">
+                        <option value="all">全部来源</option>
+                        <option value="校团委">校团委</option>
+                        <option value="信息管理学院">信息管理学院</option>
+                        <option value="创新创业学院">创新创业学院</option>
+                        <option value="统计与数学学院">统计与数学学院</option>
+                        <option value="工商管理学院">工商管理学院</option>
+                        <option value="教务处">教务处</option>
+                        <option value="艺术学院">艺术学院</option>
+                        <option value="经济与贸易学院">经济与贸易学院</option>
+                        <option value="金融学院">金融学院</option>
+                        <option value="会计学院">会计学院</option>
+                        <option value="旅游与酒店管理学院">旅游与酒店管理学院</option>
+                        <option value="外国语学院">外国语学院</option>
+                        <option value="信息工程学院">信息工程学院</option>
+                        <option value="学生工作处">学生工作处</option>
+                    </select>
+                </div>
+            </div>
+            <div id="calendar">
+                <div class="calendar-loading">
+                    <i class="fas fa-spinner fa-spin" style="font-size: 24px; margin-right: 10px;"></i>日历加载中...
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 学科竞赛信息聚合平台. 保留所有权利.</p>
+        </div>
+    </footer>
+
+    <!-- 竞赛详情模态框 -->
+    <div class="modal" id="contest-modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modal-title"></h2>
+            <div class="modal-body">
+                <div class="info-item">
+                    <span class="label">来源：</span>
+                    <span id="modal-source"></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">发布时间：</span>
+                    <span id="modal-publish-time"></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">截止时间：</span>
+                    <span id="modal-deadline"></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">组织者：</span>
+                    <span id="modal-organizer"></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">参赛对象：</span>
+                    <span id="modal-participants"></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">奖项设置：</span>
+                    <span id="modal-prize"></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">联系方式：</span>
+                    <span id="modal-contact"></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">原文链接：</span>
+                    <div class="url-note-container">
+                        <a id="modal-url" href="#" target="_blank" class="url-btn-small">
+                            <i class="fas fa-external-link-alt"></i> 查看原文
+                        </a>
+                        <p class="note">以上内容仅供参考，详情请查看原文</p>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="label">详细内容：</span>
+                    <p id="modal-content"></p>
+                </div>
+                <div class="modal-actions">
+                    <button id="favorite-btn" data-url="">
+                        <i class="far fa-star"></i> 收藏
+                    </button>
+                    <button id="like-btn">
+                        <i class="far fa-thumbs-up"></i> 有用
+                    </button>
+                    <button id="dislike-btn">
+                        <i class="far fa-thumbs-down"></i> 无用
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FullCalendar 脚本 -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales/zh-cn.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/calendar.js"></script>
+    <script src="js/reminder.js"></script>
+    <script src="js/reminder-ui.js"></script>
+    <script>
+        // 页面加载完成后初始化登录状态
+        window.addEventListener('DOMContentLoaded', function() {
+            initNavbarLoginStatus();
+        });
+    </script>
+
+    <!-- 登录/注册模态框 -->
+    <div id="login-modal" class="modal" style="display: none;">
+        <div class="modal-content login-modal-content">
+            <span class="close" id="close-login-modal">&times;</span>
+            <div class="login-modal-container">
+                <div id="login-form-modal">
+                    <h2><i class="fas fa-sign-in-alt"></i> 用户登录</h2>
+                    <div class="form-group">
+                        <label for="login-username-modal">用户名</label>
+                        <input type="text" id="login-username-modal" placeholder="请输入用户名">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password-modal">密码</label>
+                        <input type="password" id="login-password-modal" placeholder="请输入密码">
+                    </div>
+                    <button class="btn btn-primary-gradient" id="login-button-modal">
+                        <i class="fas fa-sign-in-alt"></i> 登录
+                    </button>
+                    <div class="error-message" id="login-error-modal"></div>
+                    <div class="toggle-form">
+                        还没有账号？ <a href="#" id="switch-to-register-modal">立即注册</a>
+                    </div>
+                </div>
+
+                <div id="register-form-modal" style="display: none;">
+                    <h2><i class="fas fa-user-plus"></i> 用户注册</h2>
+                    <div class="form-group">
+                        <label for="register-username-modal">用户名</label>
+                        <input type="text" id="register-username-modal" placeholder="请输入用户名">
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password-modal">密码</label>
+                        <input type="password" id="register-password-modal" placeholder="请输入密码">
+                    </div>
+                    <div class="form-group">
+                        <label for="register-confirm-password-modal">确认密码</label>
+                        <input type="password" id="register-confirm-password-modal" placeholder="请再次输入密码">
+                    </div>
+                    <button class="btn btn-primary-gradient" id="register-button-modal">
+                        <i class="fas fa-user-plus"></i> 注册
+                    </button>
+                    <div class="error-message" id="register-error-modal"></div>
+                    <div class="success-message" id="register-success-modal"></div>
+                    <div class="toggle-form">
+                        已有账号？ <a href="#" id="switch-to-login-modal">立即登录</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 提醒历史弹窗 -->
+    <div id="reminder-panel" class="reminder-panel">
+        <div class="reminder-panel-header">
+            <h3>通知列表</h3>
+        </div>
+        <div id="reminder-list" class="reminder-list"></div>
+        <div id="reminder-pagination" class="reminder-pagination">
+            <button id="reminder-prev">上一页</button>
+            <span id="reminder-page-info">第 1 页，共 0 页</span>
+            <button id="reminder-next">下一页</button>
+        </div>
+    </div>
+</body>
+</html>
