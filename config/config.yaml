@@ -1,0 +1,107 @@
+app:
+  name: "ContestTrace 竞赛信息智能采集与自动化平台"
+  timezone: "Asia/Shanghai"
+
+# 统一路径：相对项目根目录
+paths:
+  data_dir: "data"
+  db_path: "data/contesttrace.sqlite3"
+  logs_dir: "logs"
+  cache_dir: "cache"
+  static_pages_dir: "static_pages"
+  exports_dir: "exports"
+  attachments_dir: "data/attachments"
+  models_dir: "data/models"
+  reports_dir: "data/reports"
+  crawl_state_file: "data/crawl_state.json"
+  training_dir: "data/training_data"
+
+# 兼容旧版单站点字段（多源模式下以 config/sites.yaml 为准，此处可作默认回退）
+site:
+  base_url: "https://tw.hbue.edu.cn"
+  list_url_template: "https://tw.hbue.edu.cn/31/list{page}.htm"
+  list_page:
+    list_container_css: "ul.wp_article_list"
+    item_css: "li.list_item"
+    title_link_css: "span.Article_Title a"
+    publish_date_css: "span.Article_PublishDate"
+  detail_page:
+    title_css: "h1.arti_title"
+    publisher_css: "span.arti_publisher"
+    update_time_css: "span.arti_update"
+    content_css: "div.wp_articlecontent"
+
+crawl:
+  start_page: 1
+  end_page: 18
+  # 合规：随机延时区间（秒），实际不低于 1.5 由代码兜底
+  delay_seconds_min: 1.5
+  delay_seconds_max: 3.5
+  timeout_seconds: 25
+  max_retries: 3
+  retry_backoff_seconds: 1.0
+  save_raw_html: true
+  save_raw_html_limit_list_pages: 3
+  save_raw_html_limit_detail_pages: 30
+  # 是否遵守 robots.txt（建议 true）
+  respect_robots_txt: true
+  # 断点续爬：记录已处理页码到 crawl_state_file
+  incremental: true
+  # 附件：最大单文件 MB（防止异常大文件占满磁盘）
+  attachment_max_mb: 20
+
+filter:
+  positive_keywords:
+    - "竞赛"
+    - "比赛"
+    - "大赛"
+    - "挑战杯"
+    - "创新"
+    - "创业"
+    - "征集"
+    - "作品"
+    - "报名"
+    - "选拔"
+    - "校级"
+    - "省级"
+    - "国赛"
+    - "演讲"
+    - "辩论"
+    - "读书"
+    - "科技"
+    - "科研"
+  negative_keywords:
+    - "公示"
+    - "招聘"
+    - "任免"
+    - "会议"
+    - "团日"
+    - "培训"
+    - "西部计划"
+    - "社会实践"
+    - "志愿"
+
+anti_crawl:
+  default_headers:
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+    Accept-Language: "zh-CN,zh;q=0.9"
+    Connection: "keep-alive"
+    Upgrade-Insecure-Requests: "1"
+  user_agents:
+    - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+    - "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+    - "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_2) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15"
+    - "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    - "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+    - "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:123.0) Gecko/20100101 Firefox/123.0"
+    - "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.0"
+    - "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1"
+    - "Mozilla/5.0 (iPad; CPU OS 17_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1"
+    - "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+
+database:
+  table_name: "contest_announcements"
+  unique_url_column: "detail_url"
+
+logging:
+  keep_days: 7

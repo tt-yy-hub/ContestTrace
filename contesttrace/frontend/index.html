@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学科竞赛信息聚合平台</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/ai-assistant.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs2@0.0.2/qrcode.min.js"></script>
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <h1>学科竞赛信息聚合平台</h1>
+            </div>
+            <nav class="nav">
+                <ul>
+                    <li><a href="index.html" class="active"><i class="fas fa-home"></i> 首页</a></li>
+                    <li><a href="stats.html"><i class="fas fa-chart-bar"></i> 数据统计</a></li>
+                    <li><a href="favorites.html"><i class="fas fa-star"></i> 我的收藏</a></li>
+                    <li><a href="calendar.html"><i class="fas fa-calendar"></i> 竞赛日历</a></li>
+                    <li class="reminder-bell-container">
+                        <i class="fas fa-bell" id="reminder-bell"></i>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <section class="hero">
+            <div class="container">
+                <h2>智能聚合，精准推送</h2>
+                <p>实时聚合各学院竞赛信息，智能筛选匹配，为你推荐最适合的学科竞赛</p>
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="搜索竞赛...">
+                    <button id="search-button"><i class="fas fa-search"></i></button>
+                </div>
+            </div>
+        </section>
+
+        <section class="contest-list">
+            <div class="container">
+                <div class="filter-bar">
+                    <div class="filter-group">
+                        <label for="source-filter">来源：</label>
+                        <select id="source-filter">
+                            <option value="all">全部来源</option>
+                            <option value="校团委">校团委</option>
+                            <option value="信息管理学院">信息管理学院</option>
+                            <option value="创新创业学院">创新创业学院</option>
+                            <option value="统计与数学学院">统计与数学学院</option>
+                            <option value="工商管理学院">工商管理学院</option>
+                            <option value="教务处">教务处</option>
+                            <option value="艺术学院">艺术学院</option>
+                            <option value="经济与贸易学院">经济与贸易学院</option>
+                            <option value="金融学院">金融学院</option>
+                            <option value="会计学院">会计学院</option>
+                            <option value="旅游与酒店管理学院">旅游与酒店管理学院</option>
+                            <option value="外国语学院">外国语学院</option>
+                            <option value="信息工程学院">信息工程学院</option>
+                            <option value="学生工作处">学生工作处</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="time-filter">时间：</label>
+                        <select id="time-filter">
+                            <option value="all">全部时间</option>
+                            <option value="week">近一周</option>
+                            <option value="month">近一个月</option>
+                            <option value="quarter">近三个月</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="month-filter">月份：</label>
+                        <select id="month-filter">
+                            <option value="all">全部月份</option>
+                            <option value="2025-01">2025年1月</option>
+                            <option value="2025-02">2025年2月</option>
+                            <option value="2025-03">2025年3月</option>
+                            <option value="2025-04">2025年4月</option>
+                            <option value="2025-05">2025年5月</option>
+                            <option value="2025-06">2025年6月</option>
+                            <option value="2025-07">2025年7月</option>
+                            <option value="2025-08">2025年8月</option>
+                            <option value="2025-09">2025年9月</option>
+                            <option value="2025-10">2025年10月</option>
+                            <option value="2025-11">2025年11月</option>
+                            <option value="2025-12">2025年12月</option>
+                            <option value="2026-01">2026年1月</option>
+                            <option value="2026-02">2026年2月</option>
+                            <option value="2026-03">2026年3月</option>
+                            <option value="2026-04">2026年4月</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="sort-select">排序：</label>
+                        <select id="sort-select">
+                            <option value="default">默认排序</option>
+                            <option value="deadline_nearest">截止日期（最近）</option>
+                            <option value="deadline_earliest">截止日期（最早）</option>
+                            <option value="deadline_latest">截止日期（最晚）</option>
+                            <option value="publish_desc">发布时间（最新）</option>
+                            <option value="publish_asc">发布时间（最早）</option>
+                            <option value="title_asc">标题（字母）</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="contests" id="contest-container">
+                    <!-- 竞赛卡片将通过 JavaScript 动态添加 -->
+                </div>
+
+                <div class="pagination" id="pagination">
+                    <!-- 分页控件将通过 JavaScript 动态添加 -->
+                </div>
+            </div>
+        </section>
+
+        <section id="about" class="about">
+            <div class="container">
+                <h2>关于我们</h2>
+                <p>学科竞赛信息聚合平台致力于为大学生提供全面、及时、准确的学科竞赛信息，帮助学生发现适合自己的竞赛机会，提升个人能力和竞争力。</p>
+                <p>我们通过爬虫技术实时聚合各学院的竞赛信息，经过智能筛选和分类，为用户提供个性化的竞赛推荐。</p>
+                <div class="team">
+                    <h3>开发团队</h3>
+                    <p>我们是一支专注于数据挖掘和信息聚合的技术团队，致力于为学生提供更好的竞赛信息服务。</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 学科竞赛信息聚合平台. 保留所有权利.</p>
+        </div>
+    </footer>
+
+    <!-- 竞赛详情模态框 -->
+    <div class="modal" id="contest-modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2 id="modal-title"></h2>
+            <div class="modal-body">
+                <div class="info-item">
+                    <span class="label">来源：</span>
+                    <span id="modal-source"></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">发布时间：</span>
+                    <span id="modal-publish-time"></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">截止时间：</span>
+                    <span id="modal-deadline"></span>
+                </div>
+
+                <div class="info-item">
+                    <span class="label">组织者：</span>
+                    <span id="modal-organizer"></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">参赛对象：</span>
+                    <span id="modal-participants"></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">奖项设置：</span>
+                    <span id="modal-prize"></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">联系方式：</span>
+                    <span id="modal-contact"></span>
+                </div>
+                <div class="info-item">
+                    <span class="label">原文链接：</span>
+                    <div class="url-note-container">
+                        <a id="modal-url" href="#" target="_blank" class="url-btn-small">
+                            <i class="fas fa-external-link-alt"></i> 查看原文
+                        </a>
+                        <p class="note">以上内容仅供参考，详情请查看原文</p>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <span class="label">详细内容：</span>
+                    <p id="modal-content"></p>
+                </div>
+                <div class="modal-actions">
+                    <button id="favorite-btn" data-url="">
+                        <i class="far fa-star"></i> 收藏
+                    </button>
+                    <button id="like-btn">
+                        <i class="far fa-thumbs-up"></i> 有用
+                    </button>
+                    <button id="dislike-btn">
+                        <i class="far fa-thumbs-down"></i> 无用
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 笔记编辑模态框 -->
+    <div class="modal" id="note-modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>竞赛笔记</h2>
+            <div class="modal-body">
+                <textarea id="note-textarea" rows="8" placeholder="在这里记录笔记..."></textarea>
+                <div class="modal-actions">
+                    <button class="save-btn">保存</button>
+                    <button class="cancel-btn">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="edit-contest-modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>编辑竞赛信息</h2>
+            <div class="modal-body">
+                <div class="edit-form-group">
+                    <label for="edit-title">标题</label>
+                    <input type="text" id="edit-title" placeholder="竞赛标题">
+                </div>
+                <div class="edit-form-group">
+                    <label for="edit-deadline">截止日期</label>
+                    <input type="text" id="edit-deadline" placeholder="如：截止日期：2026-12-31">
+                </div>
+                <div class="edit-form-group">
+                    <label for="edit-summary">摘要</label>
+                    <textarea id="edit-summary" placeholder="竞赛摘要"></textarea>
+                </div>
+                <div class="edit-form-group">
+                    <label for="edit-organizer">组织者</label>
+                    <input type="text" id="edit-organizer" placeholder="组织者">
+                </div>
+                <div class="edit-form-group">
+                    <label for="edit-participants">参赛对象</label>
+                    <input type="text" id="edit-participants" placeholder="参赛对象">
+                </div>
+                <div class="edit-form-group">
+                    <label for="edit-prize">奖项设置</label>
+                    <input type="text" id="edit-prize" placeholder="奖项设置">
+                </div>
+                <div class="modal-actions">
+                    <button class="save-btn">保存</button>
+                    <button class="reset-btn">重置</button>
+                    <button class="cancel-btn">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/sync.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/reminder.js"></script>
+    <script src="js/reminder-ui.js"></script>
+    <script>
+        // 页面加载完成后初始化登录状态
+        window.addEventListener('DOMContentLoaded', function() {
+            initNavbarLoginStatus();
+            initSync();
+        });
+    </script>
+
+    <!-- 登录/注册模态框 -->
+    <div id="login-modal" class="modal" style="display: none;">
+        <div class="modal-content login-modal-content">
+            <span class="close" id="close-login-modal">&times;</span>
+            <div class="login-modal-container">
+                <div id="login-form-modal">
+                    <h2><i class="fas fa-sign-in-alt"></i> 用户登录</h2>
+                    <div class="form-group">
+                        <label for="login-username-modal">用户名</label>
+                        <input type="text" id="login-username-modal" placeholder="请输入用户名">
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password-modal">密码</label>
+                        <input type="password" id="login-password-modal" placeholder="请输入密码">
+                    </div>
+                    <button class="btn btn-primary-gradient" id="login-button-modal">
+                        <i class="fas fa-sign-in-alt"></i> 登录
+                    </button>
+                    <div class="error-message" id="login-error-modal"></div>
+                    <div class="toggle-form">
+                        还没有账号？ <a href="#" id="switch-to-register-modal">立即注册</a>
+                    </div>
+                </div>
+
+                <div id="register-form-modal" style="display: none;">
+                    <h2><i class="fas fa-user-plus"></i> 用户注册</h2>
+                    <div class="form-group">
+                        <label for="register-username-modal">用户名</label>
+                        <input type="text" id="register-username-modal" placeholder="请输入用户名">
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password-modal">密码</label>
+                        <input type="password" id="register-password-modal" placeholder="请输入密码">
+                    </div>
+                    <div class="form-group">
+                        <label for="register-confirm-password-modal">确认密码</label>
+                        <input type="password" id="register-confirm-password-modal" placeholder="请再次输入密码">
+                    </div>
+                    <button class="btn btn-primary-gradient" id="register-button-modal">
+                        <i class="fas fa-user-plus"></i> 注册
+                    </button>
+                    <div class="error-message" id="register-error-modal"></div>
+                    <div class="success-message" id="register-success-modal"></div>
+                    <div class="toggle-form">
+                        已有账号？ <a href="#" id="switch-to-login-modal">立即登录</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 提醒历史弹窗 -->
+    <div id="reminder-panel" class="reminder-panel">
+        <div class="reminder-panel-header">
+            <h3>通知列表</h3>
+        </div>
+        <div id="reminder-list" class="reminder-list"></div>
+        <div id="reminder-pagination" class="reminder-pagination">
+            <button id="reminder-prev">上一页</button>
+            <span id="reminder-page-info">第 1 页，共 0 页</span>
+            <button id="reminder-next">下一页</button>
+        </div>
+    </div>
+
+    <!-- AI悬浮按钮 -->
+    <div class="ai-float-button" id="ai-float-button">
+        <span class="ai-button-text">AI</span>
+    </div>
+
+    <!-- AI聊天对话框 -->
+    <div class="ai-chat-dialog" id="ai-chat-dialog">
+        <div class="ai-dialog-header" id="ai-dialog-header">
+            <div class="ai-dialog-title">
+                <i class="fas fa-robot"></i>
+                <span>AI 竞赛助手</span>
+            </div>
+            <button class="ai-dialog-close" id="ai-dialog-close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="ai-dialog-body" id="ai-dialog-body">
+            <div class="ai-welcome-message">
+                <p>👋 你好！我是AI竞赛助手</p>
+                <p>我可以帮你推荐适合的学科竞赛，请告诉我你的专业或兴趣领域！</p>
+            </div>
+        </div>
+        <div class="ai-dialog-footer">
+            <input type="text" class="ai-input" id="ai-input" placeholder="输入你的问题...">
+            <button class="ai-send-btn" id="ai-send-btn">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+
+    <script src="js/ai-assistant.js"></script>
+</body>
+</html>
