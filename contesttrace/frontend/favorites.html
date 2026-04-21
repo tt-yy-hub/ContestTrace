@@ -40,6 +40,10 @@
                     <button id="clear-favorites"><i class="fas fa-trash"></i> 清空所有收藏</button>
                     <button id="export-json-btn"><i class="fas fa-file-export"></i> 导出 JSON</button>
                     <button id="export-csv-btn"><i class="fas fa-file-csv"></i> 导出 CSV</button>
+                    <div class="view-switch-buttons">
+                        <button class="view-switch-btn active" data-view="card"><i class="fas fa-th-large"></i> 卡片视图</button>
+                        <button class="view-switch-btn" data-view="timeline"><i class="fas fa-stream"></i> 时间轴视图</button>
+                    </div>
                 </div>
             </div>
         </section>
@@ -120,6 +124,10 @@
                         <p>您还没有收藏任何竞赛，去首页看看吧！</p>
                         <a href="index.html" class="btn">去首页</a>
                     </div>
+                </div>
+                
+                <div id="timeline-view" style="display: none;">
+                    <!-- 时间轴视图将通过 JavaScript 动态添加 -->
                 </div>
             </div>
         </section>
