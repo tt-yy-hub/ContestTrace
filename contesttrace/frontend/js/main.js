@@ -32,6 +32,20 @@ window.addEventListener('DOMContentLoaded', async function() {
         initContestList();
         initModal();
         
+        // 检查是否有词云搜索关键词
+        const cloudKeyword = sessionStorage.getItem('cloud_search_keyword');
+        if (cloudKeyword) {
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) {
+                searchInput.value = cloudKeyword;
+                searchInput.focus();
+                // 触发搜索
+                renderContestList();
+                // 清除 sessionStorage
+                sessionStorage.removeItem('cloud_search_keyword');
+            }
+        }
+        
         // 请求通知权限
         requestNotificationPermission();
     } catch (error) {
