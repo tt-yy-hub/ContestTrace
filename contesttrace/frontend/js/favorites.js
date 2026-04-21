@@ -2,6 +2,8 @@
  * 收藏页面逻辑
  */
 
+let currentView = 'card';
+
 // 页面加载完成后初始化
 window.addEventListener('DOMContentLoaded', function() {
     try {
@@ -114,6 +116,24 @@ function initEventListeners() {
     if (exportCsvBtn) {
         exportCsvBtn.addEventListener('click', exportDataToCSV);
     }
+    
+    // 视图切换按钮
+    const viewSwitchBtns = document.querySelectorAll('.view-switch-btn');
+    viewSwitchBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const view = this.dataset.view;
+            if (view && view !== currentView) {
+                currentView = view;
+                
+                // 更新按钮状态
+                viewSwitchBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                // 切换视图
+                renderFavorites();
+            }
+        });
+    });
 }
 
 // 从deadline字符串中提取日期
@@ -202,10 +222,11 @@ function sortContests(contests, sortType) {
 // 渲染收藏列表
 function renderFavorites() {
     const favoriteContainer = document.getElementById('favorite-container');
+    const timelineView = document.getElementById('timeline-view');
     const emptyFavorites = document.getElementById('empty-favorites');
     
-    if (!favoriteContainer) {
-        console.error('favorite-container元素不存在');
+    if (!favoriteContainer || !timelineView) {
+        console.error('favorite-container或timeline-view元素不存在');
         return;
     }
     
@@ -273,30 +294,42 @@ function renderFavorites() {
         });
     }
     
-    // 排序
-    const sortSelect = document.getElementById('sort-select');
-    const sortType = sortSelect ? sortSelect.value : 'default';
-    filteredFavorites = sortContests(filteredFavorites, sortType);
-    
-    // 渲染收藏的竞赛卡片
-    favoriteContainer.innerHTML = '';
-    
-    if (filteredFavorites.length === 0) {
-        if (emptyFavorites) {
-            emptyFavorites.style.display = 'block';
+    // 根据当前视图渲染
+    if (currentView === 'card') {
+        // 卡片视图
+        favoriteContainer.style.display = 'grid';
+        timelineView.style.display = 'none';
+        
+        // 排序
+        const sortSelect = document.getElementById('sort-select');
+        const sortType = sortSelect ? sortSelect.value : 'default';
+        filteredFavorites = sortContests(filteredFavorites, sortType);
+        
+        // 渲染收藏的竞赛卡片
+        favoriteContainer.innerHTML = '';
+        
+        if (filteredFavorites.length === 0) {
+            if (emptyFavorites) {
+                emptyFavorites.style.display = 'block';
+            }
+        } else {
+            if (emptyFavorites) {
+                emptyFavorites.style.display = 'none';
+            }
+            
+            filteredFavorites.forEach(contest => {
+                // 应用自定义数据
+                const custom = getCustomization(contest.id);
+                const displayContest = applyCustomization(contest, custom);
+                const card = createFavoriteCard(displayContest);
+                favoriteContainer.appendChild(card);
+            });
         }
     } else {
-        if (emptyFavorites) {
-            emptyFavorites.style.display = 'none';
-        }
-        
-        filteredFavorites.forEach(contest => {
-            // 应用自定义数据
-            const custom = getCustomization(contest.id);
-            const displayContest = applyCustomization(contest, custom);
-            const card = createFavoriteCard(displayContest);
-            favoriteContainer.appendChild(card);
-        });
+        // 时间轴视图
+        favoriteContainer.style.display = 'none';
+        timelineView.style.display = 'block';
+        renderTimelineView(filteredFavorites);
     }
 }
 
@@ -507,6 +540,94 @@ function removeFavorite(contestId) {
     const remindedFlags = getFromLocalStorage('reminded_flags', {});
     delete remindedFlags[contestIdStr];
     saveToLocalStorage('reminded_flags', remindedFlags);
+}
+
+// 渲染时间轴视图
+function renderTimelineView(favorites) {
+    const timelineView = document.getElementById('timeline-view');
+    if (!timelineView) return;
+    
+    timelineView.innerHTML = '';
+    
+    if (favorites.length === 0) {
+        timelineView.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-calendar-alt"></i>
+                <h3>暂无收藏竞赛</h3>
+                <p>去首页添加一些竞赛吧！</p>
+                <a href="index.html" class="btn">去首页</a>
+            </div>
+        `;
+        return;
+    }
+    
+    // 应用自定义数据
+    const displayFavorites = favorites.map(contest => {
+        const custom = getCustomization(contest.id);
+        return applyCustomization(contest, custom);
+    });
+    
+    // 按截止日期排序（升序）
+    displayFavorites.sort((a, b) => {
+        const dateA = a.deadline ? extractDate(a.deadline) : null;
+        const dateB = b.deadline ? extractDate(b.deadline) : null;
+        
+        if (!dateA && !dateB) return 0;
+        if (!dateA) return 1;
+        if (!dateB) return -1;
+        
+        return new Date(dateA) - new Date(dateB);
+    });
+    
+    // 生成时间轴条目
+    displayFavorites.forEach(contest => {
+        const daysLeft = calculateDaysLeft(contest.deadline);
+        const isExpired = daysLeft < 0;
+        const isUrgent = daysLeft >= 0 && daysLeft <= 3;
+        
+        let statusClass = 'normal';
+        if (isExpired) statusClass = 'expired';
+        else if (isUrgent) statusClass = 'urgent';
+        
+        const dateObj = contest.deadline ? extractDate(contest.deadline) : null;
+        const dateText = dateObj ? formatDate(dateObj).substring(5) : '无日期';
+        
+        let daysText = '';
+        let daysIcon = '';
+        if (isExpired) {
+            daysText = '已过期';
+            daysIcon = '<i class="fas fa-hourglass-end"></i>';
+        } else if (daysLeft === 0) {
+            daysText = '今天截止';
+            daysIcon = '<i class="fas fa-clock"></i>';
+        } else {
+            daysText = `${daysLeft}天后截止`;
+            daysIcon = '<i class="fas fa-hourglass-half"></i>';
+        }
+        
+        const item = document.createElement('div');
+        item.className = `timeline-item ${statusClass}`;
+        item.dataset.id = contest.id;
+        
+        item.innerHTML = `
+            <div class="timeline-date">
+                <i class="fas fa-circle"></i>
+                ${dateText}
+            </div>
+            <div class="timeline-title" title="${contest.title}">${contest.title}</div>
+            <div class="timeline-days">
+                ${daysIcon}
+                ${daysText}
+            </div>
+        `;
+        
+        // 点击打开详情模态框
+        item.addEventListener('click', function() {
+            openContestModal(contest);
+        });
+        
+        timelineView.appendChild(item);
+    });
 }
 
 // 打开竞赛详情模态框

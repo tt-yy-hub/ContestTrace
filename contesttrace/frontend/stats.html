@@ -6,6 +6,8 @@
     <title>数据统计 - 学科竞赛信息聚合平台</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/wordcloud@1.2.2/src/wordcloud2.js"></script>
+    <script src="https://unpkg.com/cnchar@2.2.0/cnchar.min.js"></script>
 </head>
 <body>
     <header class="header">
@@ -58,6 +60,10 @@
                 </div>
                 <div class="chart-container">
                     <canvas id="contest-chart"></canvas>
+                </div>
+                <div class="wordcloud-container">
+                    <h3>竞赛关键词云</h3>
+                    <div id="keyword-cloud" style="width: 100%; height: 400px;"></div>
                 </div>
             </div>
         </section>
