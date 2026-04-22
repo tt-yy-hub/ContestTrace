@@ -29,6 +29,11 @@ body {
     background-color: #f0f4f8;
     min-height: 100vh;
     overflow-x: hidden;
+    background-image: url('../images/hujing.png');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-attachment: fixed;
 }
 
 .container {
@@ -267,7 +272,7 @@ body {
 
 /* 搜索栏 */
 .hero {
-    background: white;
+    background: rgba(255, 255, 255, 0.9);
     padding: 4rem 0;
     box-shadow: 0 4px 12px rgba(0,0,0,0.1);
     margin-bottom: 2rem;
@@ -429,7 +434,7 @@ body {
 
 /* 筛选栏 */
 .filter-bar {
-    background: white;
+    background: rgba(255, 255, 255, 0.9);
     padding: 1.5rem;
     border-radius: 12px;
     box-shadow: 0 4px 12px rgba(0,0,0,0.08);
@@ -479,7 +484,7 @@ body {
 }
 
 .contest-card {
-    background: white;
+    background: rgba(255, 255, 255, 0.9);
     border: 1px solid var(--light-gray);
     border-radius: var(--border-radius);
     padding: 1.5rem;
@@ -805,7 +810,7 @@ body {
 
 /* 关于我们 */
 .about {
-    background: white;
+    background: rgba(255, 255, 255, 0.9);
     padding: 2.5rem;
     border-radius: 16px;
     box-shadow: 0 4px 16px rgba(0,0,0,0.08);

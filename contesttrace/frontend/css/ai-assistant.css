@@ -1,0 +1,233 @@
+.ai-float-button {
+    position: fixed;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    cursor: pointer;
+    z-index: 10002;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    bottom: 20px;
+    right: 20px;
+}
+
+.ai-float-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+}
+
+.ai-float-button:active {
+    transform: scale(0.95);
+}
+
+.ai-button-text {
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.ai-chat-dialog {
+    position: fixed;
+    width: 350px;
+    height: 450px;
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    z-index: 10001;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    bottom: 80px;
+    right: 20px;
+}
+
+.ai-chat-dialog.active {
+    display: flex;
+}
+
+.ai-dialog-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: move;
+}
+
+.ai-dialog-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 15px;
+}
+
+.ai-dialog-close {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: background 0.2s ease;
+}
+
+.ai-dialog-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.ai-dialog-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 15px;
+    background: #f8f9fa;
+}
+
+.ai-welcome-message {
+    text-align: center;
+    color: #666;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+.ai-welcome-message p {
+    margin-bottom: 10px;
+}
+
+.ai-message {
+    margin-bottom: 12px;
+    animation: fadeInUp 0.3s ease;
+}
+
+.ai-message.user {
+    text-align: right;
+}
+
+.ai-message.user .ai-message-content {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 16px 16px 4px 16px;
+    display: inline-block;
+    padding: 10px 14px;
+    max-width: 85%;
+    text-align: left;
+}
+
+.ai-message.assistant .ai-message-content {
+    background: white;
+    color: #333;
+    border-radius: 16px 16px 16px 4px;
+    display: inline-block;
+    padding: 10px 14px;
+    max-width: 85%;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.ai-message-content {
+    line-height: 1.5;
+    font-size: 14px;
+}
+
+.ai-message-content .contest-item {
+    margin: 8px 0;
+    padding: 8px;
+    background: #f0f4ff;
+    border-radius: 8px;
+    border-left: 3px solid #667eea;
+}
+
+.ai-message-content .contest-name {
+    font-weight: 600;
+    color: #333;
+}
+
+.ai-message-content .contest-reason {
+    font-size: 13px;
+    color: #666;
+    margin-top: 4px;
+}
+
+.ai-dialog-footer {
+    padding: 12px;
+    background: white;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 8px;
+}
+
+.ai-input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 20px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.ai-input:focus {
+    border-color: #667eea;
+}
+
+.ai-send-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.ai-send-btn:hover {
+    transform: scale(1.05);
+}
+
+.ai-send-btn:active {
+    transform: scale(0.95);
+}
+
+.ai-send-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .ai-chat-dialog {
+        width: calc(100vw - 40px);
+        height: calc(100vh - 150px);
+        left: 20px;
+        right: 20px;
+        bottom: 80px;
+    }
+
+    .ai-float-button {
+        width: 45px;
+        height: 45px;
+        bottom: 15px;
+        right: 15px;
+    }
+}
