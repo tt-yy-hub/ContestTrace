@@ -155,12 +155,13 @@ function generateId() {
 
 // 记录竞赛行为
 function recordContestAction(contestId, actionType) {
+    const normalizedContestId = String(contestId);
     // 加载现有的热度数据
     const contestHotness = getFromLocalStorage('contest_hotness', {});
     
     // 初始化该竞赛的热度数据
-    if (!contestHotness[contestId]) {
-        contestHotness[contestId] = {
+    if (!contestHotness[normalizedContestId]) {
+        contestHotness[normalizedContestId] = {
             views: 0,
             favorites: 0,
             useful: 0,
@@ -171,21 +172,34 @@ function recordContestAction(contestId, actionType) {
     // 根据行为类型增加相应的热度值
     switch (actionType) {
         case 'view':
-            contestHotness[contestId].views += 1;
-            contestHotness[contestId].total += 1;
+            contestHotness[normalizedContestId].views += 1;
+            contestHotness[normalizedContestId].total += 1;
             break;
         case 'favorite':
-            contestHotness[contestId].favorites += 3;
-            contestHotness[contestId].total += 3;
+            contestHotness[normalizedContestId].favorites += 3;
+            contestHotness[normalizedContestId].total += 3;
             break;
         case 'useful':
-            contestHotness[contestId].useful += 2;
-            contestHotness[contestId].total += 2;
+            contestHotness[normalizedContestId].useful += 2;
+            contestHotness[normalizedContestId].total += 2;
             break;
     }
     
     // 保存热度数据
     saveToLocalStorage('contest_hotness', contestHotness);
+
+    // 写入行为日志（用于个性化推荐，按时间衰减）
+    const actionLog = getFromLocalStorage('contest_action_log', []);
+    actionLog.push({
+        contestId: normalizedContestId,
+        actionType,
+        timestamp: new Date().toISOString()
+    });
+    const MAX_LOG = 1000;
+    if (actionLog.length > MAX_LOG) {
+        actionLog.splice(0, actionLog.length - MAX_LOG);
+    }
+    saveToLocalStorage('contest_action_log', actionLog);
 }
 
 // 获取热门竞赛

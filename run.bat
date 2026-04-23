@@ -11,6 +11,7 @@ echo 4. Filter Data
 echo 5. Export Data to Frontend
 echo 6. Start Frontend Server
 echo 7. Run Full Process (Spiders->Merge->Filter->Export->Frontend)
+echo 8. Start AI Rerank API Server
 echo 0. Exit
 echo =======================================
 echo Please enter option number:
@@ -23,6 +24,7 @@ if "%choice%"=="4" goto FILTER
 if "%choice%"=="5" goto EXPORT
 if "%choice%"=="6" goto FRONTEND
 if "%choice%"=="7" goto FULL_PROCESS
+if "%choice%"=="8" goto AI_API
 if "%choice%"=="0" goto EXIT
 
 echo Invalid option, please try again!
@@ -93,6 +95,14 @@ echo Press Ctrl+C to exit server...
 pushd contesttrace\frontend
 python -m http.server 8000
 popd
+goto MENU
+
+:AI_API
+echo Starting AI Rerank API server...
+echo API endpoint: http://127.0.0.1:8001/api/ai/rerank
+echo Health check: http://127.0.0.1:8001/health
+echo Press Ctrl+C to exit server...
+python contesttrace\api_server.py
 goto MENU
 
 :EXIT
