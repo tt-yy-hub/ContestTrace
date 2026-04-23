@@ -1528,6 +1528,8 @@
             selected = selected.slice(0, 3);
         }
 
+        selected = applyAcademicYearSelectionPolicy(selected, pool, profile);
+
         return {
             selectedCategory: selectedCategory || '你当前输入条件',
             profileSnapshot: snapshotText,
@@ -1544,6 +1546,89 @@
             }
         });
         return Object.keys(map).map(function(k) { return map[k]; });
+    }
+
+    function isBeginnerFriendlyLevel(levelText) {
+        const lv = String(levelText || '');
+        return /院级|校级|普通/.test(lv);
+    }
+
+    function isIntermediateFriendlyLevel(levelText) {
+        const lv = String(levelText || '');
+        return /省级|A类|国家级/.test(lv) || (/校级/.test(lv) && !/院级/.test(lv));
+    }
+
+    function getYearProfileBonus(row, profile) {
+        const year = String((profile && profile.academicYear) || '');
+        const level = String(row.item.level || '');
+        const category = String(row.item.category || '');
+        const majorLv = getMajorMatchLevel(profile || {}, category);
+        const majorBonus = majorLv === 'high' ? 10 : (majorLv === 'mid' ? 4 : -12);
+        const exp = String((profile && profile.experience) || '');
+        const target = String((profile && profile.targetAward) || '').toLowerCase();
+        const college = String((profile && profile.college) || '');
+        const title = String(row.item.name || '');
+        const tagsText = (row.item.tags || []).join(' ');
+        let bonus = majorBonus;
+
+        if (college && (title.includes(college) || tagsText.includes(college))) bonus += 8;
+
+        if (year === '大一') {
+            bonus += isBeginnerFriendlyLevel(level) ? 12 : -14;
+            if (/无参赛经验|新手|入门|没经验/.test(exp) && /国家级|A\+/.test(level)) bonus -= 18;
+            if (/国家级|a\+|冲奖/.test(target) && /A\+|国家级/.test(level)) bonus += 6;
+            if (/校级|保底/.test(target) && isBeginnerFriendlyLevel(level)) bonus += 10;
+            if (category === '文体体育类赛事活动' || category === '心理健康&思政德育类活动') bonus += 6;
+        } else if (year === '大二') {
+            bonus += isIntermediateFriendlyLevel(level) ? 14 : -10;
+            if (/无参赛经验|新手|入门|没经验/.test(exp) && /A\+|国家级/.test(level)) bonus -= 8;
+            if (/有参赛经验|熟练|经验丰富/.test(exp) && /省级|A类|国家级/.test(level)) bonus += 8;
+            if (/国家级|a\+|冲奖/.test(target) && /A\+|国家级|A类/.test(level)) bonus += 12;
+            if (/校级|保底/.test(target) && /院级/.test(level)) bonus -= 8;
+            if (category === '数学建模、统计调研类专业竞赛' || category === '经管商科、企业运营模拟类竞赛' || category === '计算机、软件、数字设计艺术类竞赛') bonus += 6;
+        }
+        return bonus;
+    }
+
+    // 年级差异化选拔层：联动专业/学院/经验/目标奖项，避免不同画像结果同质化
+    function applyAcademicYearSelectionPolicy(selected, pool, profile) {
+        const year = String((profile && profile.academicYear) || '');
+        if (year !== '大一' && year !== '大二') return selected;
+
+        const uniq = function(list) {
+            const seen = {};
+            return (list || []).filter(function(row) {
+                if (!row || !row.item || !row.item.name) return false;
+                if (seen[row.item.name]) return false;
+                seen[row.item.name] = true;
+                return true;
+            });
+        };
+
+        const base = uniq(pool).map(function(row) {
+            return Object.assign({}, row, {
+                yearProfileScore: Number(row.score || 0) + getYearProfileBonus(row, profile || {})
+            });
+        });
+
+        const filtered = base.filter(function(row) {
+            return year === '大一' ? isBeginnerFriendlyLevel(row.item.level) : isIntermediateFriendlyLevel(row.item.level);
+        });
+        const effective = filtered.length >= 3 ? filtered : base;
+        effective.sort(function(a, b) {
+            return b.yearProfileScore - a.yearProfileScore;
+        });
+
+        const selectedSafe = uniq(selected).map(function(row) {
+            return Object.assign({}, row, {
+                yearProfileScore: Number(row.score || 0) + getYearProfileBonus(row, profile || {})
+            });
+        });
+        selectedSafe.sort(function(a, b) {
+            return b.yearProfileScore - a.yearProfileScore;
+        });
+
+        return mergeByName(effective.slice(0, 3), selectedSafe).slice(0, 3);
     }
 
     function buildSaiXingHtml(result, profile) {

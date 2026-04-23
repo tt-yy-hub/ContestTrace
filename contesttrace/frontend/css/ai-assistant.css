@@ -130,6 +130,22 @@
     overflow-y: auto;
     padding: 15px;
     background: #f8f9fa;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+}
+
+.ai-dialog-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.ai-dialog-body::-webkit-scrollbar-track {
+    background: #eef2ff;
+    border-radius: 999px;
+}
+
+.ai-dialog-body::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #667eea, #764ba2);
+    border-radius: 999px;
 }
 
 .ai-welcome-message {
@@ -245,7 +261,25 @@
     background: white;
     border-top: 1px solid #eee;
     display: flex;
+    flex-wrap: wrap;
     gap: 8px;
+}
+
+.ai-footer-interest-bar {
+    width: 100%;
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
+
+.ai-footer-interest-bar::-webkit-scrollbar {
+    height: 5px;
+}
+
+.ai-footer-interest-chip {
+    white-space: nowrap;
+    flex: 0 0 auto;
 }
 
 .ai-input {
