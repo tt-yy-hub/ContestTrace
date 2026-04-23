@@ -270,7 +270,7 @@ def split_tokens(text: str) -> List[str]:
 
 
 if __name__ == "__main__":
-    host = os.getenv("AI_API_HOST", "127.0.0.1")
-    port = int(os.getenv("AI_API_PORT", "8001") or "8001")
+    host = os.getenv("AI_API_HOST", "0.0.0.0")
+    port = int(os.getenv("PORT", os.getenv("AI_API_PORT", "8001")) or "8001")
     app.run(host=host, port=port, debug=False)
 
