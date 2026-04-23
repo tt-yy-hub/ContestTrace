@@ -13,6 +13,7 @@
 
     const PROFILE_KEY = 'ai_assistant_profile_v2';
     const DIALOG_SIZE_KEY = 'ai_assistant_dialog_size_v1';
+    const CHAT_HISTORY_KEY = 'ai_assistant_chat_history_v1';
     const CLASSIFY_CACHE_KEY = 'ai_contest_classify_cache_v1';
     const RECENT_ACTION_KEY = 'contest_action_log';
     const HOTNESS_KEY = 'contest_hotness';
@@ -124,12 +125,18 @@
     let buttonDialogOffsetY = -50;
     let contestPoolPromise = null;
     let lastInterestClickTs = 0;
+    let isFullscreen = false;
+    let fullscreenBtn = null;
+    let dialogSnapshot = null;
+    let resizeHandleEl = null;
     let isResizingDialog = false;
     let resizeStartX = 0;
     let resizeStartY = 0;
     let resizeStartW = 0;
     let resizeStartH = 0;
-    let resizeHandleEl = null;
+    const contestDetailMap = {};
+    const contestRefMap = {};
+    let currentAssistantContestRefs = [];
 
     function initButtonPosition() {
         aiButton.style.left = (window.innerWidth - 70) + 'px';
@@ -148,12 +155,35 @@
         aiDialog.style.top = y + 'px';
     }
 
+    function ensureFloatButtonVisible() {
+        const rect = aiButton.getBoundingClientRect();
+        const margin = 10;
+        const maxX = window.innerWidth - rect.width - margin;
+        const maxY = window.innerHeight - rect.height - margin;
+        let x = rect.left;
+        let y = rect.top;
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+            x = window.innerWidth - rect.width - 20;
+            y = window.innerHeight - rect.height - 20;
+        }
+        x = Math.max(margin, Math.min(x, maxX));
+        y = Math.max(margin, Math.min(y, maxY));
+        aiButton.style.left = x + 'px';
+        aiButton.style.top = y + 'px';
+        aiButton.style.right = 'auto';
+        aiButton.style.bottom = 'auto';
+        aiButton.style.display = 'flex';
+        aiButton.style.visibility = 'visible';
+        aiButton.style.opacity = '1';
+        aiButton.style.zIndex = '10002';
+    }
+
     function getDialogSizeBounds() {
         return {
-            minW: 320,
-            minH: 360,
-            maxW: Math.max(320, window.innerWidth - 20),
-            maxH: Math.max(360, window.innerHeight - 20)
+            minW: 280,
+            minH: 400,
+            maxW: Math.max(280, window.innerWidth - 20),
+            maxH: Math.max(400, window.innerHeight - 20)
         };
     }
 
@@ -187,48 +217,130 @@
         }
     }
 
+    function iconSvg(kind) {
+        if (kind === 'minimize') {
+            return '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 14 10 14 10 20"></polyline><polyline points="20 10 14 10 14 4"></polyline><line x1="14" y1="10" x2="21" y2="3"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>';
+        }
+        return '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>';
+    }
+
+    function updateFullscreenButton() {
+        if (!fullscreenBtn) return;
+        const label = isFullscreen ? '收起' : '全屏';
+        fullscreenBtn.innerHTML = iconSvg(isFullscreen ? 'minimize' : 'maximize') + '<span>' + label + '</span>';
+        fullscreenBtn.setAttribute('aria-label', label);
+        fullscreenBtn.title = label;
+    }
+
+    function toggleFullscreen() {
+        if (!isDialogOpen) return;
+        if (!isFullscreen) {
+            const rect = aiDialog.getBoundingClientRect();
+            dialogSnapshot = {
+                left: rect.left,
+                top: rect.top,
+                width: aiDialog.offsetWidth,
+                height: aiDialog.offsetHeight
+            };
+            aiDialog.classList.add('ai-chat-dialog-fullscreen');
+            aiDialog.style.left = '0px';
+            aiDialog.style.top = '0px';
+            aiDialog.style.width = '100vw';
+            aiDialog.style.height = '100vh';
+            aiDialog.style.right = 'auto';
+            aiDialog.style.bottom = 'auto';
+            isFullscreen = true;
+        } else {
+            aiDialog.classList.remove('ai-chat-dialog-fullscreen');
+            const snap = dialogSnapshot || {};
+            const width = Number(snap.width) || 350;
+            const height = Number(snap.height) || 450;
+            aiDialog.style.width = width + 'px';
+            aiDialog.style.height = height + 'px';
+            aiDialog.style.left = (Number(snap.left) || 20) + 'px';
+            aiDialog.style.top = (Number(snap.top) || 20) + 'px';
+            clampDialogPosition();
+            isFullscreen = false;
+            saveDialogSize();
+        }
+        updateFullscreenButton();
+    }
+
     function setupResizeControls() {
         if (dialogHeader.querySelector('.ai-resize-tools')) return;
 
         const tools = document.createElement('div');
         tools.className = 'ai-resize-tools';
 
-        const zoomOutBtn = document.createElement('button');
-        zoomOutBtn.type = 'button';
-        zoomOutBtn.className = 'ai-resize-btn';
-        zoomOutBtn.textContent = '缩小';
-        zoomOutBtn.addEventListener('click', function(e) {
+        fullscreenBtn = document.createElement('button');
+        fullscreenBtn.type = 'button';
+        fullscreenBtn.className = 'ai-resize-btn ai-fullscreen-btn';
+        fullscreenBtn.addEventListener('click', function(e) {
             e.stopPropagation();
-            setDialogSize(aiDialog.offsetWidth - 36, aiDialog.offsetHeight - 48, true);
+            toggleFullscreen();
         });
-
-        const zoomInBtn = document.createElement('button');
-        zoomInBtn.type = 'button';
-        zoomInBtn.className = 'ai-resize-btn';
-        zoomInBtn.textContent = '放大';
-        zoomInBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            setDialogSize(aiDialog.offsetWidth + 36, aiDialog.offsetHeight + 48, true);
-        });
-
-        tools.appendChild(zoomOutBtn);
-        tools.appendChild(zoomInBtn);
+        tools.appendChild(fullscreenBtn);
         dialogHeader.insertBefore(tools, dialogClose);
+        updateFullscreenButton();
 
-        resizeHandleEl = document.createElement('div');
-        resizeHandleEl.className = 'ai-resize-handle';
-        resizeHandleEl.title = '拖拽调整大小';
-        aiDialog.appendChild(resizeHandleEl);
+        if (!resizeHandleEl) {
+            resizeHandleEl = document.createElement('div');
+            resizeHandleEl.className = 'ai-resize-handle';
+            resizeHandleEl.title = '拖拽调整大小';
+            aiDialog.appendChild(resizeHandleEl);
+            resizeHandleEl.addEventListener('mousedown', function(e) {
+                if (e.button !== 0) return;
+                if (isFullscreen) return;
+                isResizingDialog = true;
+                resizeStartX = e.clientX;
+                resizeStartY = e.clientY;
+                resizeStartW = aiDialog.offsetWidth;
+                resizeStartH = aiDialog.offsetHeight;
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        }
+    }
 
-        resizeHandleEl.addEventListener('mousedown', function(e) {
-            if (e.button !== 0) return;
-            isResizingDialog = true;
-            resizeStartX = e.clientX;
-            resizeStartY = e.clientY;
-            resizeStartW = aiDialog.offsetWidth;
-            resizeStartH = aiDialog.offsetHeight;
-            e.preventDefault();
-            e.stopPropagation();
+    function getChatHistory() {
+        return getFromLocalStorageSafe(CHAT_HISTORY_KEY, []);
+    }
+
+    function saveChatHistory(history) {
+        localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify((history || []).slice(-100)));
+    }
+
+    function appendChatHistory(role, content, contestRefs) {
+        const history = getChatHistory();
+        const payload = {
+            role: role,
+            content: content,
+            timestamp: new Date().toISOString()
+        };
+        if (Array.isArray(contestRefs) && contestRefs.length > 0) {
+            payload.contestRefs = contestRefs;
+        }
+        history.push(payload);
+        saveChatHistory(history);
+    }
+
+    function registerContestRefs(refs) {
+        if (!Array.isArray(refs)) return;
+        refs.forEach(function(ref) {
+            if (!ref || !ref.refId) return;
+            contestRefMap[String(ref.refId)] = ref;
+        });
+    }
+
+    function renderChatHistory() {
+        const history = getChatHistory();
+        if (!Array.isArray(history) || history.length === 0) return;
+        dialogBody.querySelectorAll('.ai-message').forEach(function(node) {
+            node.remove();
+        });
+        history.forEach(function(item) {
+            if (!item || !item.role) return;
+            addMessage(String(item.content || ''), item.role, false, item.contestRefs);
         });
     }
 
@@ -631,6 +743,45 @@
         let html = '<p>已基于“静态标签 + 动态偏好 + 热度时效 + 语义重排(失败自动规则兜底)”完成推荐：</p>';
         picked.forEach(function(item, idx) {
             const contest = item.contest;
+            const detailId = 'ranked-' + String(contest.id) + '-' + idx + '-' + Date.now();
+            const refId = 'ref-ranked-' + String(contest.id) + '-' + idx + '-' + Date.now() + '-' + Math.random().toString(16).slice(2, 6);
+            contestDetailMap[detailId] = {
+                name: contest.title || '未命名竞赛',
+                level: contest.level || contest.competition_level || '普通',
+                time: contest.deadline || contest.publish_time || '以官方通知为准',
+                intro: contest.summary || contest.content || '暂无详细介绍',
+                prepAdvice: '先确认报名条件与时间节点，再按“选题/组队/材料准备/提交复核”四步推进。',
+                source: contest.source || '以官方通知为准',
+                publishTime: contest.publish_time || '-',
+                deadline: contest.deadline || '-',
+                organizer: contest.source || '待补充',
+                participants: '以官方通知中的参赛对象要求为准',
+                prize: contest.level || '待补充',
+                contact: contest.source ? ('可联系：' + contest.source) : '见原文通知',
+                url: contest.url || '#',
+                content: contest.content || contest.summary || '暂无正文内容',
+                modalContest: {
+                    id: contest.id || detailId,
+                    title: contest.title || '未命名竞赛',
+                    source: contest.source || '以官方通知为准',
+                    publish_time: contest.publish_time || '',
+                    deadline: contest.deadline || '',
+                    organizer: contest.organizer || contest.source || '未知',
+                    participants: contest.participants || '以官方通知中的参赛对象要求为准',
+                    prize: contest.prize || contest.level || '未知',
+                    contact: contest.contact || contest.source || '未知',
+                    content: contest.content || contest.summary || '无详细内容',
+                    url: contest.url || '#'
+                }
+            };
+            const refPayload = {
+                refId: refId,
+                detailId: detailId,
+                modalContest: contestDetailMap[detailId].modalContest,
+                name: contestDetailMap[detailId].name
+            };
+            contestRefMap[refId] = refPayload;
+            currentAssistantContestRefs.push(refPayload);
             const reasons = [];
             reasons.push('类别：' + contest.categoryName);
             reasons.push('等级：' + contest.level);
@@ -638,7 +789,7 @@
             if (item.dynamicScore >= 8) reasons.push('结合你近期行为偏好');
             if (item.qualityScore >= 4) reasons.push('时效/质量较高');
 
-            html += '<div class="contest-item">';
+            html += '<div class="contest-item ai-contest-clickable" data-detail-id="' + escapeHtml(detailId) + '" data-contest-ref-id="' + escapeHtml(refId) + '">';
             html += '<div class="contest-name">' + (idx + 1) + '. ' + escapeHtml(contest.title) + '</div>';
             html += '<div class="contest-reason">推荐理由：' + escapeHtml(reasons.join('；')) + '</div>';
             html += '</div>';
@@ -1155,7 +1306,46 @@
         const diversifiedReasons = diversifyReasons(reasonList);
         result.items.forEach(function(row, idx) {
             const item = row.item;
-            html += '<div class="contest-item">';
+            const detailId = 'saixing-' + idx + '-' + Date.now() + '-' + Math.random().toString(16).slice(2, 6);
+            const refId = 'ref-saixing-' + idx + '-' + Date.now() + '-' + Math.random().toString(16).slice(2, 6);
+            contestDetailMap[detailId] = {
+                name: item.name || '未命名竞赛',
+                level: item.level || '普通',
+                time: item.time || '以官方通知为准',
+                intro: getContestFeature(item),
+                prepAdvice: getValueHint(item, profile),
+                source: 'AI 赛行知识库',
+                publishTime: item.year ? (String(item.year) + '-01-01') : '-',
+                deadline: item.time || '-',
+                organizer: '以官方通知为准',
+                participants: '以官方通知中的参赛对象要求为准',
+                prize: item.level || '待补充',
+                contact: '见原文通知',
+                url: '#',
+                content: getContestFeature(item) + '。' + getValueHint(item, profile),
+                modalContest: {
+                    id: detailId,
+                    title: item.name || '未命名竞赛',
+                    source: 'AI 赛行知识库',
+                    publish_time: item.year ? (String(item.year) + '-01-01') : '',
+                    deadline: item.time || '',
+                    organizer: '以官方通知为准',
+                    participants: '以官方通知中的参赛对象要求为准',
+                    prize: item.level || '未知',
+                    contact: '见原文通知',
+                    content: getContestFeature(item) + '。' + getValueHint(item, profile),
+                    url: '#'
+                }
+            };
+            const refPayload = {
+                refId: refId,
+                detailId: detailId,
+                modalContest: contestDetailMap[detailId].modalContest,
+                name: contestDetailMap[detailId].name
+            };
+            contestRefMap[refId] = refPayload;
+            currentAssistantContestRefs.push(refPayload);
+            html += '<div class="contest-item ai-contest-clickable" data-detail-id="' + escapeHtml(detailId) + '" data-contest-ref-id="' + escapeHtml(refId) + '">';
             html += '<div class="contest-name"><strong>' + (idx + 1) + '. ' + escapeHtml(item.name) + '</strong> [' + escapeHtml(item.level) + '] [' + escapeHtml(item.time) + ']</div>';
             html += '<div class="contest-reason"><strong>匹配度</strong>：' + buildMatchStars(row.score) + '</div>';
             html += '<div class="contest-reason"><strong>为什么推荐</strong>：' + escapeHtml(diversifiedReasons[idx]) + '</div>';
@@ -1172,6 +1362,7 @@
     }
 
     async function generateResponse(userMessage) {
+        currentAssistantContestRefs = [];
         const profile = loadProfile();
         updateProfileFromMessage(profile, userMessage);
         const intent = extractUserIntent(userMessage);
@@ -1247,6 +1438,8 @@
     dialogHeader.addEventListener('mousedown', function(e) {
         if (e.button !== 0) return;
         if (e.target.closest('.ai-dialog-close')) return;
+        if (e.target.closest('.ai-fullscreen-btn')) return;
+        if (isFullscreen) return;
         isDraggingDialog = true;
         const rect = aiDialog.getBoundingClientRect();
         dragOffsetX = e.clientX - rect.left;
@@ -1294,6 +1487,11 @@
             aiButton.style.right = 'auto';
             aiButton.style.bottom = 'auto';
         }
+        if (isResizingDialog) {
+            const dx = e.clientX - resizeStartX;
+            const dy = e.clientY - resizeStartY;
+            setDialogSize(resizeStartW + dx, resizeStartH + dy, false);
+        }
     });
 
     document.addEventListener('mouseup', function() {
@@ -1311,7 +1509,8 @@
         }
     });
 
-    function addMessage(content, type) {
+    function addMessage(content, type, persist, contestRefs) {
+        const shouldPersist = persist !== false;
         const messageDiv = document.createElement('div');
         messageDiv.className = 'ai-message ' + type;
         const contentDiv = document.createElement('div');
@@ -1323,7 +1522,13 @@
         }
         messageDiv.appendChild(contentDiv);
         dialogBody.appendChild(messageDiv);
+        if (type === 'assistant' && Array.isArray(contestRefs) && contestRefs.length > 0) {
+            registerContestRefs(contestRefs);
+        }
         dialogBody.scrollTop = dialogBody.scrollHeight;
+        if (shouldPersist) {
+            appendChatHistory(type, content, contestRefs);
+        }
     }
 
     async function sendMessage() {
@@ -1339,7 +1544,8 @@
         aiSendBtn.disabled = true;
         try {
             const response = await generateResponse(message);
-            addMessage(response, 'assistant');
+            const refs = Array.isArray(currentAssistantContestRefs) ? currentAssistantContestRefs.slice() : [];
+            addMessage(response, 'assistant', true, refs);
         } catch (e) {
             addMessage('<p>推荐服务暂时不可用，已启用规则兜底。请稍后重试或补充更具体的条件。</p>', 'assistant');
         } finally {
@@ -1362,18 +1568,212 @@
     function openDialog() {
         aiDialog.classList.add('active');
         isDialogOpen = true;
+        if (isFullscreen) {
+            aiDialog.classList.add('ai-chat-dialog-fullscreen');
+            aiDialog.style.left = '0px';
+            aiDialog.style.top = '0px';
+            aiDialog.style.width = '100vw';
+            aiDialog.style.height = '100vh';
+        } else {
+            aiDialog.classList.remove('ai-chat-dialog-fullscreen');
+            const buttonRect = aiButton.getBoundingClientRect();
+            aiDialog.style.left = (buttonRect.left - buttonDialogOffsetX) + 'px';
+            aiDialog.style.top = (buttonRect.top - buttonDialogOffsetY) + 'px';
+            aiDialog.style.right = 'auto';
+            aiDialog.style.bottom = 'auto';
+            clampDialogPosition();
+        }
         aiInput.focus();
-        const buttonRect = aiButton.getBoundingClientRect();
-        aiDialog.style.left = (buttonRect.left - buttonDialogOffsetX) + 'px';
-        aiDialog.style.top = (buttonRect.top - buttonDialogOffsetY) + 'px';
-        aiDialog.style.right = 'auto';
-        aiDialog.style.bottom = 'auto';
-        clampDialogPosition();
     }
 
     function closeDialog() {
+        if (isFullscreen) {
+            isFullscreen = false;
+            aiDialog.classList.remove('ai-chat-dialog-fullscreen');
+            updateFullscreenButton();
+        }
         aiDialog.classList.remove('active');
         isDialogOpen = false;
+        ensureFloatButtonVisible();
+    }
+
+    function getDetailDialogElements() {
+        let mask = document.getElementById('ai-contest-detail-mask');
+        if (mask) {
+            return {
+                mask: mask,
+                body: mask.querySelector('.ai-contest-detail-dialog')
+            };
+        }
+        mask = document.createElement('div');
+        mask.id = 'ai-contest-detail-mask';
+        mask.className = 'ai-contest-detail-mask';
+        mask.innerHTML = [
+            '<div class="ai-contest-detail-dialog" role="dialog" aria-modal="true">',
+            '  <button type="button" class="ai-contest-detail-close" aria-label="关闭"><i class="fas fa-times"></i></button>',
+            '  <div class="ai-contest-detail-body"></div>',
+            '</div>'
+        ].join('');
+        document.body.appendChild(mask);
+        const dialog = mask.querySelector('.ai-contest-detail-dialog');
+        mask.addEventListener('click', function(e) {
+            if (e.target === mask) {
+                mask.classList.remove('active');
+            }
+        });
+        mask.querySelector('.ai-contest-detail-close').addEventListener('click', function() {
+            mask.classList.remove('active');
+        });
+        dialog.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+        return {
+            mask: mask,
+            body: mask.querySelector('.ai-contest-detail-body')
+        };
+    }
+
+    function safeText(text) {
+        const raw = String(text == null ? '' : text).trim();
+        if (!raw || raw.toLowerCase() === 'null' || raw.toLowerCase() === 'undefined') return '-';
+        return raw;
+    }
+
+    function openContestDetail(detail) {
+        if (!detail) return;
+        const els = getDetailDialogElements();
+        const link = (detail.url && detail.url !== '#')
+            ? '<a href="' + escapeHtml(detail.url) + '" target="_blank" rel="noopener noreferrer" class="ai-contest-original-link"><i class="fas fa-external-link-alt"></i> 查看原文</a>'
+            : '<span class="ai-contest-original-link disabled">暂无原文链接</span>';
+        els.body.innerHTML = [
+            '<h3 class="ai-contest-detail-title">' + escapeHtml(detail.name || '未命名竞赛') + '</h3>',
+            '<div class="ai-contest-detail-grid">',
+            '  <div class="ai-contest-detail-row"><div class="ai-contest-detail-key">来源：</div><div class="ai-contest-detail-val">' + escapeHtml(safeText(detail.source)) + '</div></div>',
+            '  <div class="ai-contest-detail-row"><div class="ai-contest-detail-key">发布时间：</div><div class="ai-contest-detail-val">' + escapeHtml(safeText(detail.publishTime)) + '</div></div>',
+            '  <div class="ai-contest-detail-row"><div class="ai-contest-detail-key">截止时间：</div><div class="ai-contest-detail-val">' + escapeHtml(safeText(detail.deadline || detail.time)) + '</div></div>',
+            '  <div class="ai-contest-detail-row"><div class="ai-contest-detail-key">组织者：</div><div class="ai-contest-detail-val">' + escapeHtml(safeText(detail.organizer)) + '</div></div>',
+            '  <div class="ai-contest-detail-row"><div class="ai-contest-detail-key">参赛对象：</div><div class="ai-contest-detail-val">' + escapeHtml(safeText(detail.participants)) + '</div></div>',
+            '  <div class="ai-contest-detail-row"><div class="ai-contest-detail-key">奖项设置：</div><div class="ai-contest-detail-val">' + escapeHtml(safeText(detail.prize || detail.level)) + '</div></div>',
+            '  <div class="ai-contest-detail-row"><div class="ai-contest-detail-key">联系方式：</div><div class="ai-contest-detail-val">' + escapeHtml(safeText(detail.contact)) + '</div></div>',
+            '  <div class="ai-contest-detail-row"><div class="ai-contest-detail-key">原文链接：</div><div class="ai-contest-detail-val ai-contest-detail-link-wrap">' + link + '<span class="ai-contest-link-tip">以上内容仅供参考，详情请查看原文</span></div></div>',
+            '</div>',
+            '<div class="ai-contest-detail-content">' + escapeHtml(safeText(detail.content || detail.intro)) + '</div>',
+            '<div class="ai-contest-detail-advise"><strong>备赛建议：</strong>' + escapeHtml(safeText(detail.prepAdvice)) + '</div>'
+        ].join('');
+        els.mask.classList.add('active');
+    }
+
+    function normalizeLooseText(text) {
+        return String(text || '')
+            .toLowerCase()
+            .replace(/\s+/g, '')
+            .replace(/[“”"'‘’【】\[\]（）()、，,。.!！?？\-_:：]/g, '');
+    }
+
+    function getYearTokens(text) {
+        const matches = String(text || '').match(/20\d{2}/g);
+        return matches || [];
+    }
+
+    function calcTitleSimilarity(a, b) {
+        const na = normalizeLooseText(a);
+        const nb = normalizeLooseText(b);
+        if (!na || !nb) return 0;
+        if (na === nb) return 100;
+        if (na.includes(nb) || nb.includes(na)) return 92;
+
+        let score = 0;
+        const yearsA = getYearTokens(a);
+        const yearsB = getYearTokens(b);
+        if (yearsA.length && yearsB.length && yearsA.some(function(y) { return yearsB.includes(y); })) {
+            score += 15;
+        }
+
+        const keyTokens = String(a || '')
+            .split(/[“”"'‘’【】\[\]（）()、，,。.!！?？\s\-_:：]+/)
+            .map(function(x) { return x.trim(); })
+            .filter(function(x) { return x.length >= 2; });
+        keyTokens.forEach(function(token) {
+            const nt = normalizeLooseText(token);
+            if (!nt) return;
+            if (nb.includes(nt)) score += 6;
+        });
+        if (/挑战杯/.test(a) && /挑战杯/.test(b)) score += 20;
+        if (/创新大赛|创新创业/.test(a) && /创新大赛|创新创业/.test(b)) score += 10;
+        return score;
+    }
+
+    function toModalContest(detail) {
+        if (!detail) return null;
+        // 优先尝试从全量竞赛中匹配真实对象，确保打开的是主站统一模态框（图二）
+        if (typeof loadAllContests === 'function') {
+            const all = loadAllContests() || [];
+            const directId = detail.modalContest && detail.modalContest.id ? String(detail.modalContest.id) : '';
+            const name = String(detail.name || '').trim();
+            const matched = all.find(function(c) {
+                if (directId && String(c.id) === directId) return true;
+                if (name && String(c.title || '').trim() === name) return true;
+                return false;
+            });
+            if (matched) return matched;
+
+            // 精确匹配失败时，做模糊匹配，尽量找到真实通知
+            if (name && all.length) {
+                const ranked = all.map(function(c) {
+                    return {
+                        contest: c,
+                        score: calcTitleSimilarity(name, c.title || '')
+                    };
+                }).sort(function(a, b) { return b.score - a.score; });
+                if (ranked[0] && ranked[0].score >= 35) {
+                    return ranked[0].contest;
+                }
+            }
+        }
+        // 无法匹配时，使用助手内映射字段兜底
+        return detail.modalContest || {
+            id: String(detail.id || Date.now()),
+            title: detail.name || '未命名竞赛',
+            source: detail.source || '以官方通知为准',
+            publish_time: detail.publishTime || '',
+            deadline: detail.deadline || detail.time || '',
+            organizer: detail.organizer || detail.source || '未知',
+            participants: detail.participants || '以官方通知中的参赛对象要求为准',
+            prize: detail.prize || detail.level || '未知',
+            contact: detail.contact || '见原文通知',
+            content: detail.content || detail.intro || '无详细内容',
+            url: detail.url || '#'
+        };
+    }
+
+    function extractContestNameFromCard(card) {
+        if (!card) return '';
+        const titleEl = card.querySelector('.contest-name');
+        const raw = String((titleEl && titleEl.textContent) || card.textContent || '').trim();
+        if (!raw) return '';
+        // 去掉序号前缀和尾部标签，如“1. xxx [A+] [2026年]”
+        const noIndex = raw.replace(/^\s*\d+\.\s*/, '');
+        const noTags = noIndex.replace(/\s*\[[^\]]+\]\s*/g, ' ').replace(/\s+/g, ' ').trim();
+        return noTags;
+    }
+
+    function buildDetailFromCardFallback(card) {
+        const name = extractContestNameFromCard(card);
+        if (!name) return null;
+        return {
+            id: '',
+            name: name,
+            level: '普通',
+            source: '以官方通知为准',
+            publishTime: '',
+            deadline: '',
+            organizer: '未知',
+            participants: '以官方通知中的参赛对象要求为准',
+            prize: '未知',
+            contact: '见原文通知',
+            content: name + '，请查看竞赛详情了解报名与赛程要求。',
+            url: '#'
+        };
     }
 
     aiButton.addEventListener('click', function() {
@@ -1419,6 +1819,43 @@
         triggerInterestRecommendation(interest);
     });
 
+    dialogBody.addEventListener('click', function(e) {
+        const card = e.target && e.target.closest ? e.target.closest('.ai-contest-clickable') : null;
+        if (!card) return;
+        const refId = card.getAttribute('data-contest-ref-id');
+        const detailId = card.getAttribute('data-detail-id');
+        let detail = null;
+        if (refId && contestRefMap[refId]) {
+            const ref = contestRefMap[refId];
+            if (ref.modalContest) {
+                detail = {
+                    name: ref.name || '',
+                    modalContest: ref.modalContest
+                };
+            } else if (ref.detailId && contestDetailMap[ref.detailId]) {
+                detail = contestDetailMap[ref.detailId];
+            }
+        }
+        if (detailId) {
+            detail = detail || contestDetailMap[detailId] || null;
+        }
+        // 历史记录中的卡片 data-detail-id 可能存在，但内存映射已丢失，这里做兜底还原
+        if (!detail) {
+            detail = buildDetailFromCardFallback(card);
+        }
+        if (!detail) return;
+        if (typeof window.openContestModal === 'function') {
+            const modalContest = toModalContest(detail);
+            window.openContestModal(modalContest);
+            const modalEl = document.getElementById('contest-modal');
+            if (modalEl) {
+                modalEl.style.zIndex = '10050';
+            }
+            return;
+        }
+        openContestDetail(detail);
+    });
+
     // 对外开放，便于其他页面模块主动调用 AI 助手
     window.AIAssistant = Object.assign({}, window.AIAssistant, {
         open: openDialog,
@@ -1433,22 +1870,25 @@
         document.addEventListener('DOMContentLoaded', function() {
             initButtonPosition();
             renderDialogInterestChips();
+            renderChatHistory();
         });
     } else {
         initButtonPosition();
         renderDialogInterestChips();
+        renderChatHistory();
     }
     window.addEventListener('resize', function() {
         if (!isDraggingButton) initButtonPosition();
-        if (isDialogOpen) clampDialogPosition();
-        setDialogSize(aiDialog.offsetWidth, aiDialog.offsetHeight, false);
-    });
-
-    document.addEventListener('mousemove', function(e) {
-        if (!isResizingDialog) return;
-        const dx = e.clientX - resizeStartX;
-        const dy = e.clientY - resizeStartY;
-        setDialogSize(resizeStartW + dx, resizeStartH + dy, false);
+        if (isDialogOpen && !isFullscreen) {
+            clampDialogPosition();
+            setDialogSize(aiDialog.offsetWidth, aiDialog.offsetHeight, false);
+        }
+        if (isDialogOpen && isFullscreen) {
+            aiDialog.style.left = '0px';
+            aiDialog.style.top = '0px';
+            aiDialog.style.width = '100vw';
+            aiDialog.style.height = '100vh';
+        }
     });
 
     setupResizeControls();

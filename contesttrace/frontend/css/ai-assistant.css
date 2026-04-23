@@ -45,8 +45,8 @@
     overflow: hidden;
     bottom: 80px;
     right: 20px;
-    min-width: 320px;
-    min-height: 360px;
+    min-width: 280px;
+    min-height: 400px;
     max-width: calc(100vw - 20px);
     max-height: calc(100vh - 20px);
 }
@@ -89,6 +89,9 @@
     padding: 4px 8px;
     font-size: 12px;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
 }
 
 .ai-resize-btn:hover {
@@ -108,6 +111,18 @@
 
 .ai-dialog-close:hover {
     background: rgba(255, 255, 255, 0.2);
+}
+
+.ai-chat-dialog.ai-chat-dialog-fullscreen {
+    width: 100vw !important;
+    height: 100vh !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: auto !important;
+    bottom: auto !important;
+    max-width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
 }
 
 .ai-dialog-body {
@@ -204,6 +219,16 @@
     border-left: 3px solid #667eea;
 }
 
+.ai-message-content .contest-item.ai-contest-clickable {
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.ai-message-content .contest-item.ai-contest-clickable:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px rgba(102, 126, 234, 0.18);
+}
+
 .ai-message-content .contest-name {
     font-weight: 600;
     color: #333;
@@ -277,6 +302,175 @@
     background:
         linear-gradient(135deg, transparent 0 45%, #9ca3af 45% 55%, transparent 55% 100%),
         linear-gradient(135deg, transparent 0 62%, #9ca3af 62% 72%, transparent 72% 100%);
+}
+
+.ai-contest-detail-mask {
+    position: fixed;
+    inset: 0;
+    z-index: 10030;
+    background: rgba(0, 0, 0, 0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.ai-contest-detail-mask.active {
+    display: flex;
+}
+
+.ai-contest-detail-dialog {
+    width: min(900px, calc(100vw - 40px));
+    max-height: calc(100vh - 40px);
+    overflow: auto;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+    position: relative;
+    padding: 22px 22px 18px 22px;
+}
+
+.ai-contest-detail-close {
+    position: absolute;
+    right: 10px;
+    top: 10px;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #f4f4f5;
+    color: #666;
+}
+
+.ai-contest-detail-close:hover {
+    background: #e9e9ee;
+}
+
+.ai-contest-detail-title {
+    font-size: 30px;
+    line-height: 1.25;
+    color: #1f2937;
+    font-weight: 700;
+    margin: 0 40px 18px 0;
+}
+
+.ai-contest-detail-grid {
+    border-top: 1px solid #eceff3;
+    margin-bottom: 14px;
+}
+
+.ai-contest-detail-row {
+    display: flex;
+    align-items: flex-start;
+    border-bottom: 1px solid #eceff3;
+    min-height: 64px;
+}
+
+.ai-contest-detail-key {
+    width: 145px;
+    flex: 0 0 145px;
+    padding: 18px 0;
+    font-size: 18px;
+    color: #111827;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+.ai-contest-detail-val {
+    flex: 1;
+    padding: 18px 0;
+    font-size: 18px;
+    line-height: 1.55;
+    color: #4b5563;
+    white-space: pre-wrap;
+}
+
+.ai-contest-detail-link-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.ai-contest-original-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    line-height: 1;
+    color: #fff;
+    background: linear-gradient(135deg, #6b73ff, #6f53d8);
+    border-radius: 10px;
+    text-decoration: none;
+    padding: 10px 18px;
+}
+
+.ai-contest-original-link.disabled {
+    color: #6b7280;
+    background: #e5e7eb;
+    cursor: not-allowed;
+    padding: 10px 16px;
+    border-radius: 10px;
+}
+
+.ai-contest-link-tip {
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.ai-contest-detail-content {
+    margin-top: 18px;
+    font-size: 17px;
+    line-height: 1.8;
+    color: #374151;
+    white-space: pre-wrap;
+}
+
+.ai-contest-detail-advise {
+    margin-top: 14px;
+    border-radius: 10px;
+    background: #f8fafc;
+    padding: 14px 16px;
+    font-size: 16px;
+    line-height: 1.7;
+    color: #374151;
+}
+
+@media (max-width: 1200px) {
+    .ai-contest-detail-title { font-size: 30px; }
+    .ai-contest-detail-key { font-size: 18px; width: 102px; flex-basis: 102px; }
+    .ai-contest-detail-val { font-size: 18px; }
+    .ai-contest-link-tip { font-size: 15px; }
+    .ai-contest-original-link { font-size: 15px; }
+    .ai-contest-detail-content { font-size: 19px; }
+    .ai-contest-detail-advise { font-size: 17px; }
+}
+
+@media (max-width: 768px) {
+    .ai-contest-detail-dialog {
+        width: calc(100vw - 20px);
+        padding: 16px 14px 14px 14px;
+    }
+    .ai-contest-detail-title { font-size: 20px; margin-right: 30px; }
+    .ai-contest-detail-row { min-height: 50px; }
+    .ai-contest-detail-key {
+        width: 76px;
+        flex-basis: 76px;
+        font-size: 14px;
+        padding: 12px 0;
+    }
+    .ai-contest-detail-val {
+        font-size: 14px;
+        padding: 12px 0;
+    }
+    .ai-contest-original-link {
+        font-size: 13px;
+        padding: 8px 12px;
+    }
+    .ai-contest-link-tip { font-size: 12px; }
+    .ai-contest-detail-content { font-size: 14px; }
+    .ai-contest-detail-advise { font-size: 13px; }
 }
 
 @keyframes fadeInUp {
