@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI 竞赛助手 - 缩放预览</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+            background: linear-gradient(135deg, #eef2ff 0%, #f7f8fc 100%);
+            display: grid;
+            place-items: center;
+            color: #1f2937;
+        }
+
+        .stage {
+            width: min(1000px, 94vw);
+            height: min(720px, 92vh);
+            border-radius: 18px;
+            background: #ffffff;
+            box-shadow: 0 10px 32px rgba(31, 41, 55, 0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hint {
+            position: absolute;
+            top: 14px;
+            left: 18px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .ai-chat-dialog {
+            position: absolute;
+            right: 24px;
+            bottom: 24px;
+            width: 430px;
+            height: 560px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 12px 36px rgba(17, 24, 39, 0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            min-width: 320px;
+            min-height: 360px;
+            max-width: 90%;
+            max-height: 90%;
+        }
+
+        .ai-dialog-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            user-select: none;
+        }
+
+        .title-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 17px;
+        }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .toolbar-btn {
+            border: 0;
+            background: rgba(255, 255, 255, 0.18);
+            color: #fff;
+            font-size: 13px;
+            line-height: 1;
+            padding: 6px 10px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .toolbar-btn:hover { background: rgba(255, 255, 255, 0.28); }
+
+        .ai-dialog-body {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            padding: 14px;
+            background: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .msg {
+            max-width: 86%;
+            padding: 10px 12px;
+            border-radius: 14px;
+            line-height: 1.5;
+            font-size: 14px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            word-break: break-word;
+        }
+
+        .msg.user {
+            align-self: flex-end;
+            color: #fff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 14px 14px 4px 14px;
+        }
+
+        .msg.bot {
+            align-self: flex-start;
+            color: #374151;
+            background: #fff;
+            border-radius: 14px 14px 14px 4px;
+        }
+
+        .ai-dialog-footer {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            padding: 12px;
+            border-top: 1px solid #e5e7eb;
+            background: #fff;
+            flex: 0 0 auto;
+        }
+
+        .ai-input {
+            flex: 1;
+            min-width: 0;
+            height: 40px;
+            border-radius: 999px;
+            border: 2px solid #e5e7eb;
+            outline: none;
+            padding: 0 14px;
+            font-size: 14px;
+        }
+
+        .ai-input:focus { border-color: #667eea; }
+
+        .send-btn {
+            width: 40px;
+            height: 40px;
+            border: 0;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        /* 右下角拖拽缩放控制条 */
+        .resize-handle {
+            position: absolute;
+            right: 2px;
+            bottom: 2px;
+            width: 20px;
+            height: 20px;
+            cursor: nwse-resize;
+            border-radius: 6px;
+            background:
+                linear-gradient(135deg, transparent 0 45%, #9ca3af 45% 55%, transparent 55% 100%),
+                linear-gradient(135deg, transparent 0 60%, #9ca3af 60% 70%, transparent 70% 100%);
+            opacity: 0.75;
+        }
+    </style>
+</head>
+<body>
+    <div class="stage">
+        <div class="hint">右下角可拖拽缩放；顶部可点“放大/缩小”。</div>
+
+        <div class="ai-chat-dialog" id="chatDialog">
+            <div class="ai-dialog-header">
+                <div class="title-wrap">🤖 AI 竞赛助手</div>
+                <div class="toolbar">
+                    <button class="toolbar-btn" id="zoomOutBtn">缩小</button>
+                    <button class="toolbar-btn" id="zoomInBtn">放大</button>
+                </div>
+            </div>
+
+            <div class="ai-dialog-body" id="chatBody">
+                <div class="msg bot">你好，我是赛小星。可帮你推荐合适竞赛。</div>
+                <div class="msg user">我想看英语类比赛。</div>
+                <div class="msg bot">推荐 NECCS、21 世纪杯、外研社国才杯，建议你先从校赛节奏开始准备。</div>
+            </div>
+
+            <div class="ai-dialog-footer">
+                <input class="ai-input" id="chatInput" placeholder="输入你的问题..." />
+                <button class="send-btn" id="sendBtn">➤</button>
+            </div>
+
+            <div class="resize-handle" id="resizeHandle" title="拖拽缩放"></div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const dialog = document.getElementById('chatDialog');
+            const handle = document.getElementById('resizeHandle');
+            const zoomInBtn = document.getElementById('zoomInBtn');
+            const zoomOutBtn = document.getElementById('zoomOutBtn');
+            const sendBtn = document.getElementById('sendBtn');
+            const chatInput = document.getElementById('chatInput');
+            const chatBody = document.getElementById('chatBody');
+
+            const MIN_W = 320;
+            const MIN_H = 360;
+            const STEP_W = 36;
+            const STEP_H = 48;
+
+            let isResizing = false;
+            let startX = 0;
+            let startY = 0;
+            let startW = 0;
+            let startH = 0;
+
+            function clamp(n, min, max) {
+                return Math.max(min, Math.min(n, max));
+            }
+
+            function getMaxSize() {
+                const stage = document.querySelector('.stage');
+                const rect = stage.getBoundingClientRect();
+                return { maxW: rect.width - 20, maxH: rect.height - 20 };
+            }
+
+            function setDialogSize(w, h) {
+                const { maxW, maxH } = getMaxSize();
+                dialog.style.width = clamp(w, MIN_W, maxW) + 'px';
+                dialog.style.height = clamp(h, MIN_H, maxH) + 'px';
+            }
+
+            handle.addEventListener('mousedown', function (e) {
+                isResizing = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                startW = dialog.offsetWidth;
+                startH = dialog.offsetHeight;
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', function (e) {
+                if (!isResizing) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                setDialogSize(startW + dx, startH + dy);
+            });
+
+            document.addEventListener('mouseup', function () {
+                isResizing = false;
+            });
+
+            zoomInBtn.addEventListener('click', function () {
+                setDialogSize(dialog.offsetWidth + STEP_W, dialog.offsetHeight + STEP_H);
+            });
+
+            zoomOutBtn.addEventListener('click', function () {
+                setDialogSize(dialog.offsetWidth - STEP_W, dialog.offsetHeight - STEP_H);
+            });
+
+            function sendMessage() {
+                const text = chatInput.value.trim();
+                if (!text) return;
+                const user = document.createElement('div');
+                user.className = 'msg user';
+                user.textContent = text;
+                chatBody.appendChild(user);
+
+                const bot = document.createElement('div');
+                bot.className = 'msg bot';
+                bot.textContent = '收到，你可以继续通过标签或画像信息让我生成更精准推荐。';
+                chatBody.appendChild(bot);
+
+                chatInput.value = '';
+                chatBody.scrollTop = chatBody.scrollHeight;
+            }
+
+            sendBtn.addEventListener('click', sendMessage);
+            chatInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') sendMessage();
+            });
+
+            window.addEventListener('resize', function () {
+                setDialogSize(dialog.offsetWidth, dialog.offsetHeight);
+            });
+        })();
+    </script>
+</body>
+</html>

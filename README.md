@@ -52,6 +52,40 @@ pip install -r requirements.txt
 3. **筛选数据**：筛选出竞赛相关的通知
 4. **启动前端**：启动前端服务器，访问竞赛信息
 
+### 接入本地大模型（AI 小助手重排）
+
+项目已支持 OpenAI 兼容接口（可对接本地 Ollama）。
+
+1. 复制 `.env.example` 为 `.env`，并确认：
+
+```bash
+OPENAI_API_KEY=ollama
+OPENAI_BASE_URL=http://127.0.0.1:11434/v1
+OPENAI_MODEL=qwen2.5:1.5b
+AI_API_HOST=127.0.0.1
+AI_API_PORT=8001
+```
+
+2. 启动 AI 重排后端：
+
+```bash
+python contesttrace/api_server.py
+```
+
+3. 启动前端：
+
+```bash
+cd contesttrace/frontend
+python -m http.server 8000
+```
+
+4. 验证：
+   - 健康检查：`http://127.0.0.1:8001/health`
+   - 前端页面：`http://127.0.0.1:8000`
+   - AI 助手默认调用：`http://127.0.0.1:8001/api/ai/rerank`
+
+说明：模型不可用时，会自动降级到规则重排，保证推荐稳定可用。
+
 ### 一键运行
 
 运行 `run.bat` 文件，选择相应的操作：

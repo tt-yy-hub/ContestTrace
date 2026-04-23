@@ -45,6 +45,10 @@
     overflow: hidden;
     bottom: 80px;
     right: 20px;
+    min-width: 320px;
+    min-height: 360px;
+    max-width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
 }
 
 .ai-chat-dialog.active {
@@ -67,6 +71,28 @@
     gap: 8px;
     font-weight: 600;
     font-size: 15px;
+}
+
+.ai-resize-tools {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+    margin-right: 8px;
+}
+
+.ai-resize-btn {
+    border: 0;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 7px;
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.ai-resize-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 .ai-dialog-close {
@@ -100,6 +126,40 @@
 
 .ai-welcome-message p {
     margin-bottom: 10px;
+}
+
+.ai-interest-section {
+    margin-top: 14px;
+    text-align: left;
+}
+
+.ai-interest-title {
+    font-size: 12px;
+    color: #777;
+    margin-bottom: 8px;
+}
+
+.ai-interest-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.ai-interest-chip {
+    border: 1px solid #d8defd;
+    background: #f3f5ff;
+    color: #4d5bcf;
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.ai-interest-chip:hover {
+    background: #e7ebff;
+    border-color: #c5cffc;
+    transform: translateY(-1px);
 }
 
 .ai-message {
@@ -202,6 +262,21 @@
 .ai-send-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+
+.ai-resize-handle {
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    right: 3px;
+    bottom: 3px;
+    cursor: nwse-resize;
+    border-radius: 5px;
+    opacity: 0.8;
+    z-index: 2;
+    background:
+        linear-gradient(135deg, transparent 0 45%, #9ca3af 45% 55%, transparent 55% 100%),
+        linear-gradient(135deg, transparent 0 62%, #9ca3af 62% 72%, transparent 72% 100%);
 }
 
 @keyframes fadeInUp {

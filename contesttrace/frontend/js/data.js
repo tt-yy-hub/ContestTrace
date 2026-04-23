@@ -231,6 +231,8 @@ function toggleFavorite(contestId, contest) {
         // 未收藏，则添加（先去重再添加，防止重复）
         favorites = favorites.filter(fav => String(fav.id) !== contestIdStr);
         favorites.push(contest);
+        // 记录收藏行为，供推荐系统学习
+        recordContestAction(contestIdStr, 'favorite');
     }
     saveFavorites(favorites);
     return favorites;
