@@ -6,8 +6,9 @@
     const aiInput = document.getElementById('ai-input');
     const aiSendBtn = document.getElementById('ai-send-btn');
     const dialogBody = document.getElementById('ai-dialog-body');
+    const dialogFooter = document.querySelector('.ai-dialog-footer');
 
-    if (!aiButton || !aiDialog || !dialogHeader || !dialogClose || !aiInput || !aiSendBtn || !dialogBody) {
+    if (!aiButton || !aiDialog || !dialogHeader || !dialogClose || !aiInput || !aiSendBtn || !dialogBody || !dialogFooter) {
         return;
     }
 
@@ -27,8 +28,7 @@
         { label: '经管商科', value: '经管商科、企业运营模拟类竞赛' },
         { label: '计算机设计', value: '计算机、软件、数字设计艺术类竞赛' },
         { label: '创新创业A类', value: '创新创业高水平A+/A类竞赛' },
-        { label: 'A/A+目录', value: 'A/A+官方权威学科竞赛目录' },
-        { label: '教务学业', value: '教务管理、竞赛统筹、学业相关通知' }
+        { label: 'A/A+目录', value: 'A/A+官方权威学科竞赛目录' }
     ];
     const REFERENCE_YEAR = 2026;
     const REFERENCE_MONTH = 4;
@@ -134,6 +134,7 @@
     let resizeStartY = 0;
     let resizeStartW = 0;
     let resizeStartH = 0;
+    let bodyOverflowBeforeDialog = '';
     const contestDetailMap = {};
     const contestRefMap = {};
     let currentAssistantContestRefs = [];
@@ -349,6 +350,7 @@
             major: '',
             college: '',
             experience: '',
+            academicYear: '',
             targetAward: '',
             weeklyHours: null,
             staticInterests: [],
@@ -529,6 +531,39 @@
             if (profile.major && text.includes(profile.major.toLowerCase())) staticScore += 8;
             if (profile.staticInterests.some(function(interest) { return text.includes(String(interest).toLowerCase()); })) staticScore += 10;
 
+            // 画像打分：专业/学院/经验/目标奖项（四要素全部参与）
+            if (profile.college) {
+                if (text.includes(String(profile.college).toLowerCase())) staticScore += 10;
+                else staticScore -= 2;
+            }
+            if (profile.major) {
+                if (text.includes(String(profile.major).toLowerCase())) staticScore += 10;
+                else staticScore -= 2;
+            }
+            const levelText = String(contest.level || contest.competition_level || '').toLowerCase();
+            if (profile.experience) {
+                const exp = String(profile.experience);
+                if (/无参赛经验|无经验|没经验|新手|入门/.test(exp)) {
+                    if (/a\+|国家级/.test(levelText)) staticScore -= 12;
+                    if (/院级|校级|普通/.test(levelText)) staticScore += 8;
+                } else if (/有参赛经验|有经验|熟练|经验丰富/.test(exp)) {
+                    if (/a\+|a类|国家级/.test(levelText)) staticScore += 10;
+                    if (/院级/.test(levelText)) staticScore -= 4;
+                }
+            }
+            if (profile.targetAward) {
+                const target = String(profile.targetAward).toLowerCase();
+                if (/国家级|a\+|冲奖/.test(target)) {
+                    if (/a\+|a类|国家级/.test(levelText)) staticScore += 14;
+                    else staticScore -= 5;
+                } else if (/省级|a类/.test(target)) {
+                    if (/a类|省级|国家级/.test(levelText)) staticScore += 8;
+                } else if (/校级|保底/.test(target)) {
+                    if (/校级|院级|普通/.test(levelText)) staticScore += 9;
+                    if (/a\+|国家级/.test(levelText)) staticScore -= 6;
+                }
+            }
+
             let dynamicScore = 0;
             dynamicScore += (interestWeights.category[contest.categoryId] || 0) * 1.8;
             dynamicScore += (interestWeights.level[contest.level] || 0) * 1.2;
@@ -688,10 +723,16 @@
     async function llmRerankOrFallback(intent, rankedItems) {
         const top = rankedItems.slice(0, 12);
         try {
-            const rerankApi =
-                (window.AI_RERANK_API && String(window.AI_RERANK_API).trim()) ||
-                localStorage.getItem('ai_rerank_api') ||
-                'http://127.0.0.1:8001/api/ai/rerank';
+            const isLocalHost =
+                location.hostname === 'localhost' ||
+                location.hostname === '127.0.0.1' ||
+                location.hostname === '::1';
+            const configuredApi = (window.AI_RERANK_API && String(window.AI_RERANK_API).trim()) || '';
+            const localStorageApi = localStorage.getItem('ai_rerank_api') || '';
+            const rerankApi = configuredApi || localStorageApi || (isLocalHost ? 'http://127.0.0.1:8001/api/ai/rerank' : '');
+            if (!rerankApi) {
+                return top;
+            }
             const controller = new AbortController();
             const timeout = setTimeout(function() { controller.abort(); }, 2500);
             const response = await fetch(rerankApi, {
@@ -919,6 +960,37 @@
         welcome.appendChild(section);
     }
 
+    function renderFooterInterestChips() {
+        if (dialogFooter.querySelector('.ai-footer-interest-bar')) return;
+        const bar = document.createElement('div');
+        bar.className = 'ai-footer-interest-bar';
+        DIALOG_INTEREST_CHIPS.forEach(function(chip) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'ai-interest-chip ai-footer-interest-chip';
+            btn.textContent = chip.label;
+            btn.setAttribute('data-interest', chip.value);
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                triggerInterestRecommendation(chip.value);
+            });
+            bar.appendChild(btn);
+        });
+        dialogFooter.insertBefore(bar, dialogFooter.firstChild);
+    }
+
+    function setupDialogScrollProxy() {
+        // 让用户在对话框空白区域滚轮时，也能驱动消息区滚动
+        aiDialog.addEventListener('wheel', function(e) {
+            if (!isDialogOpen) return;
+            if (e.target && e.target.closest && e.target.closest('.ai-dialog-footer')) return;
+            if (e.target === dialogBody || (e.target.closest && e.target.closest('#ai-dialog-body'))) return;
+            dialogBody.scrollTop += e.deltaY;
+            e.preventDefault();
+        }, { passive: false });
+    }
+
     function updateProfileFromMessage(profile, message) {
         const majorMatch = message.match(/(会计|统计|数学|外语|英语|计算机|软件|金融|工商管理|旅游|酒店|艺术|设计|信息工程|信息管理|经济学|经济|经贸)[学院系专业]?/);
         if (majorMatch) profile.major = majorMatch[1];
@@ -926,8 +998,11 @@
         const collegeMatch = message.match(/(会计学院|统计与数学学院|外国语学院|信息工程学院|信息管理学院|工商管理学院|旅游与酒店管理学院|艺术学院|金融学院|经济与贸易学院)/);
         if (collegeMatch) profile.college = collegeMatch[1];
 
-        const expMatch = message.match(/(无参赛经验|有参赛经验|新手|入门|熟练|经验丰富)/);
+        const expMatch = message.match(/(无参赛经验|无经验|没经验|有参赛经验|有经验|新手|入门|熟练|经验丰富)/);
         if (expMatch) profile.experience = expMatch[1];
+
+        const yearMatch = message.match(/(大一|大二|大三|大四|研一|研二|研三)/);
+        if (yearMatch) profile.academicYear = yearMatch[1];
 
         const targetMatch = message.match(/(校级|省级|国家级|a\+|a类|冲奖|保底)/i);
         if (targetMatch) profile.targetAward = targetMatch[1];
@@ -1178,9 +1253,53 @@
         return '⭐⭐⭐';
     }
 
+    function extractSaiXingQuerySignals(message) {
+        const text = String(message || '');
+        const lower = text.toLowerCase();
+        const categories = [];
+        const yearMatch = text.match(/20\d{2}/g) || [];
+        const levelHints = [];
+
+        const categoryRules = [
+            { reg: /文体|体育|运动会|羽毛球|田径|摄影|歌咏/, name: '文体体育类赛事活动' },
+            { reg: /心理|思政|德育|红色|团课/, name: '心理健康&思政德育类活动' },
+            { reg: /英语|外语|演讲|翻译|听力/, name: '英语外语学科竞赛' },
+            { reg: /数学|统计|建模|调研|正大杯/, name: '数学建模、统计调研类专业竞赛' },
+            { reg: /经管|商科|会计|金融|运营|物流/, name: '经管商科、企业运营模拟类竞赛' },
+            { reg: /计算机|软件|蓝桥杯|设计|数字艺术|信息工程/, name: '计算机、软件、数字设计艺术类竞赛' },
+            { reg: /创新创业|挑战杯|创新大赛|a\+|a类/, name: '创新创业高水平A+/A类竞赛' }
+        ];
+        categoryRules.forEach(function(rule) {
+            if (rule.reg.test(text) && !categories.includes(rule.name)) {
+                categories.push(rule.name);
+            }
+        });
+
+        if (/a\+|国家级|国奖|冲国赛/i.test(text)) levelHints.push('high');
+        if (/a类|省级/i.test(text)) levelHints.push('mid');
+        if (/校级|院级|新手|入门/i.test(text)) levelHints.push('low');
+
+        return {
+            categories: categories,
+            years: yearMatch,
+            levelHints: levelHints,
+            preferRecent: /近期|最近|本学期|尽快|马上/.test(text),
+            tokens: lower.split(/[\s,，。；;、]+/).map(function(x) { return x.trim(); }).filter(function(x) { return x.length >= 2; })
+        };
+    }
+
     function runSaiXingEngine(message, profile, intent) {
-        const selectedCategory = getSelectedCategory(intent, message);
-        if (!selectedCategory && !profile.major && !profile.college) {
+        const querySignals = extractSaiXingQuerySignals(message);
+        const selectedCategory = getSelectedCategory(intent, message) || (querySignals.categories[0] || '');
+        const hasProfileSignal = !!(
+            selectedCategory ||
+            profile.major ||
+            profile.college ||
+            profile.experience ||
+            profile.academicYear ||
+            profile.targetAward
+        );
+        if (!hasProfileSignal) {
             return null;
         }
 
@@ -1188,11 +1307,22 @@
         const userSnapshot = [];
         if (profile.college) userSnapshot.push(profile.college);
         if (profile.major) userSnapshot.push(profile.major);
+        if (profile.academicYear) userSnapshot.push(profile.academicYear);
         if (profile.experience) userSnapshot.push(profile.experience);
         if (profile.targetAward) userSnapshot.push('目标' + profile.targetAward);
         if (profile.weeklyHours) userSnapshot.push('每周' + profile.weeklyHours + '小时');
         if (clickedInterests.length > 0) userSnapshot.push('近期兴趣:' + clickedInterests.slice(-2).join('/'));
         const snapshotText = userSnapshot.length ? userSnapshot.join('，') : '新用户默认';
+
+        const relatedCategoryMap = {
+            '文体体育类赛事活动': ['心理健康&思政德育类活动'],
+            '心理健康&思政德育类活动': ['文体体育类赛事活动', '英语外语学科竞赛'],
+            '英语外语学科竞赛': ['心理健康&思政德育类活动'],
+            '数学建模、统计调研类专业竞赛': ['经管商科、企业运营模拟类竞赛'],
+            '经管商科、企业运营模拟类竞赛': ['数学建模、统计调研类专业竞赛', '创新创业高水平A+/A类竞赛'],
+            '计算机、软件、数字设计艺术类竞赛': ['创新创业高水平A+/A类竞赛'],
+            '创新创业高水平A+/A类竞赛': ['经管商科、企业运营模拟类竞赛', '计算机、软件、数字设计艺术类竞赛']
+        };
 
         let pool = SAIXING_KB.map(function(item) {
             let score = 40;
@@ -1209,11 +1339,66 @@
                 }
             }
             if ((profile.dynamicWeights && profile.dynamicWeights.category) && sameCategory) score += 10;
-            if (profile.experience && /无参赛经验|新手|入门/.test(profile.experience) && /国家级|A\+/.test(item.level)) score -= 20;
-            if (profile.experience && /无参赛经验|新手|入门/.test(profile.experience) && /院级|校级/.test(item.level)) score += 10;
+            // 经验分层：拉开“有经验 vs 无经验”的结果差异
+            if (profile.experience && /无参赛经验|无经验|没经验|新手|入门/.test(profile.experience) && /国家级|A\+/.test(item.level)) score -= 35;
+            if (profile.experience && /无参赛经验|无经验|没经验|新手|入门/.test(profile.experience) && /院级|校级/.test(item.level)) score += 18;
+            if (profile.experience && /有参赛经验|有经验|熟练|经验丰富/.test(profile.experience) && /国家级|A\+|A类/.test(item.level)) score += 15;
+            if (profile.experience && /有参赛经验|有经验|熟练|经验丰富/.test(profile.experience) && /院级/.test(item.level)) score -= 8;
+
+            // 目标奖项纳入打分：保证“目标导向”真实生效
+            if (profile.targetAward) {
+                const target = String(profile.targetAward).toLowerCase();
+                if (/国家级|a\+|冲奖/.test(target)) {
+                    if (/A\+|A类|国家级/.test(item.level)) score += 18;
+                    else score -= 10;
+                } else if (/省级|a类/.test(target)) {
+                    if (/A类|省级|国家级/.test(item.level)) score += 10;
+                } else if (/校级|保底/.test(target)) {
+                    if (/校级|院级/.test(item.level)) score += 14;
+                    if (/A\+|国家级/.test(item.level)) score -= 8;
+                }
+            }
+
+            // 年级分层：拉开“大一 vs 大二”的结果差异
+            if (profile.academicYear === '大一') {
+                if (/国家级|A\+/.test(item.level)) score -= 26;
+                if (/院级|校级/.test(item.level)) score += 22;
+                if (/文体体育类赛事活动|心理健康&思政德育类活动/.test(item.category)) score += 8;
+            }
+            if (profile.academicYear === '大二') {
+                if (/校级|省级|A类/.test(item.level)) score += 14;
+                if (/A\+/.test(item.level)) score -= 6;
+                if (/数学建模、统计调研类专业竞赛|经管商科、企业运营模拟类竞赛|计算机、软件、数字设计艺术类竞赛/.test(item.category)) score += 8;
+            }
+            if (profile.academicYear === '大三') {
+                if (/国家级|A\+|A类/.test(item.level)) score += 16;
+            }
             if (profile.weeklyHours && profile.weeklyHours < 3 && /A\+/.test(item.level) && item.year >= 2026) score -= 15;
-            score += isCurrentWindow(item) ? 40 : -50;
+            // 降低年份惩罚，避免不同兴趣都收敛到同一批A+赛事
+            score += isCurrentWindow(item) ? 35 : -15;
             score += hotnessBonus(item);
+
+            // 当次输入语义强化：避免不同话术打到同一组结果
+            const itemText = (item.name + ' ' + item.category + ' ' + (item.tags || []).join(' ') + ' ' + item.level).toLowerCase();
+            querySignals.tokens.forEach(function(tk) {
+                if (itemText.includes(tk)) score += 8;
+            });
+            if (querySignals.categories.length > 0) {
+                if (querySignals.categories.includes(item.category)) score += 26;
+                else score -= 12;
+            }
+            if (querySignals.preferRecent) {
+                score += isCurrentWindow(item) ? 10 : -8;
+            }
+            if (querySignals.years.length > 0) {
+                const y = String(item.year || '');
+                if (querySignals.years.includes(y)) score += 12;
+                else score -= 5;
+            }
+            if (querySignals.levelHints.includes('high') && /A\+|A类|国家级/.test(item.level)) score += 12;
+            if (querySignals.levelHints.includes('low') && /院级|校级/.test(item.level)) score += 10;
+            if (querySignals.levelHints.includes('low') && /A\+/.test(item.level)) score -= 10;
+
             return { item: item, score: score, cross: false };
         });
 
@@ -1247,15 +1432,41 @@
         pool.sort(function(a, b) { return b.score - a.score; });
         let selected = pool.slice(0, 3);
 
+        // 兴趣优先：点击兴趣后，至少保留2个同类别结果（不足再补）
+        if (selectedCategory) {
+            const sameCategoryCandidates = pool.filter(function(x) {
+                return x.item.category === selectedCategory;
+            });
+            const pickedSame = selected.filter(function(x) {
+                return x.item.category === selectedCategory;
+            });
+            if (pickedSame.length < 2 && sameCategoryCandidates.length > pickedSame.length) {
+                const existingNames = new Set(selected.map(function(x) { return x.item.name; }));
+                sameCategoryCandidates.forEach(function(x) {
+                    if (pickedSame.length >= 2) return;
+                    if (!existingNames.has(x.item.name)) {
+                        selected.push(x);
+                        existingNames.add(x.item.name);
+                        pickedSame.push(x);
+                    }
+                });
+                selected.sort(function(a, b) { return b.score - a.score; });
+                selected = selected.slice(0, 3);
+            }
+        }
+
         if (selected.length < 3) {
             // 新兜底：必须同时满足“标签相关 + 专业相关”
             const rule = getMajorRule(profile);
             const majorAllowed = rule
                 ? new Set([].concat(rule.high || [], rule.mid || []))
                 : null;
+            const preferredCats = selectedCategory
+                ? [selectedCategory].concat(relatedCategoryMap[selectedCategory] || [])
+                : [];
             const tagRelated = selectedCategory
                 ? SAIXING_KB.filter(function(item) {
-                    return item.category === selectedCategory || (item.tags || []).some(function(t) { return selectedCategory.includes(t) || t.includes('创新创业'); });
+                    return preferredCats.includes(item.category);
                 })
                 : SAIXING_KB;
             const fallback = tagRelated.filter(function(item) {
@@ -1276,6 +1487,45 @@
                 return b.score - a.score;
             });
             selected = mergeByName(selected, sortedFallback).slice(0, 3);
+        }
+
+        // 终极兜底：确保兴趣模块永远走统一“赛行推荐”样式，不回退到通用格式
+        if (selected.length === 0 && selectedCategory) {
+            const categoryFallback = SAIXING_KB
+                .filter(function(item) { return item.category === selectedCategory; })
+                .map(function(item) {
+                    return {
+                        item: item,
+                        score: 62 + (isCurrentWindow(item) ? 8 : 0) + hotnessBonus(item),
+                        cross: false,
+                        fallback: true,
+                        majorMatchLevel: 'unknown'
+                    };
+                })
+                .sort(function(a, b) { return b.score - a.score; })
+                .slice(0, 3);
+            selected = categoryFallback;
+        }
+
+        if (selected.length < 3 && selectedCategory) {
+            const existing = new Set(selected.map(function(x) { return x.item.name; }));
+            const extraSameCategory = SAIXING_KB
+                .filter(function(item) { return item.category === selectedCategory && !existing.has(item.name); })
+                .map(function(item) {
+                    return {
+                        item: item,
+                        score: 56 + (isCurrentWindow(item) ? 6 : 0) + hotnessBonus(item),
+                        cross: false,
+                        fallback: true,
+                        majorMatchLevel: 'unknown'
+                    };
+                })
+                .sort(function(a, b) { return b.score - a.score; });
+            extraSameCategory.forEach(function(x) {
+                if (selected.length >= 3) return;
+                selected.push(x);
+            });
+            selected = selected.slice(0, 3);
         }
 
         return {
@@ -1367,8 +1617,11 @@
         updateProfileFromMessage(profile, userMessage);
         const intent = extractUserIntent(userMessage);
         const saixing = runSaiXingEngine(userMessage, profile, intent);
-        if (saixing) {
-            return buildSaiXingHtml(saixing, profile);
+        if (saixing && Array.isArray(saixing.items) && saixing.items.length > 0) {
+            const html = buildSaiXingHtml(saixing, profile);
+            if (String(html || '').trim()) {
+                return html;
+            }
         }
         const contests = await getContestPool();
         let candidateContests = contests;
@@ -1421,7 +1674,11 @@
         if (intent.module === 'faq') {
             return buildFaqResponse(intent, reranked.length ? reranked : scored);
         }
-        return buildRecommendResponse(reranked.length ? reranked : scored, intent, profile);
+        const finalHtml = buildRecommendResponse(reranked.length ? reranked : scored, intent, profile);
+        if (!String(finalHtml || '').trim()) {
+            return '<p>已收到你的兴趣模块请求，但当前可用候选较少。建议补充“专业/学院/目标奖项/每周时间”，我会立即重算推荐。</p>';
+        }
+        return finalHtml;
     }
 
     aiButton.addEventListener('mousedown', function(e) {
@@ -1566,6 +1823,8 @@
     }
 
     function openDialog() {
+        bodyOverflowBeforeDialog = document.body.style.overflow || '';
+        document.body.style.overflow = 'hidden';
         aiDialog.classList.add('active');
         isDialogOpen = true;
         if (isFullscreen) {
@@ -1587,6 +1846,7 @@
     }
 
     function closeDialog() {
+        document.body.style.overflow = bodyOverflowBeforeDialog;
         if (isFullscreen) {
             isFullscreen = false;
             aiDialog.classList.remove('ai-chat-dialog-fullscreen');
@@ -1870,11 +2130,13 @@
         document.addEventListener('DOMContentLoaded', function() {
             initButtonPosition();
             renderDialogInterestChips();
+            renderFooterInterestChips();
             renderChatHistory();
         });
     } else {
         initButtonPosition();
         renderDialogInterestChips();
+        renderFooterInterestChips();
         renderChatHistory();
     }
     window.addEventListener('resize', function() {
@@ -1892,5 +2154,6 @@
     });
 
     setupResizeControls();
+    setupDialogScrollProxy();
     restoreDialogSize();
 })();
