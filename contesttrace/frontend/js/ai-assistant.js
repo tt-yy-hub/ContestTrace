@@ -723,13 +723,9 @@
     async function llmRerankOrFallback(intent, rankedItems) {
         const top = rankedItems.slice(0, 12);
         try {
-            const isLocalHost =
-                location.hostname === 'localhost' ||
-                location.hostname === '127.0.0.1' ||
-                location.hostname === '::1';
             const configuredApi = (window.AI_RERANK_API && String(window.AI_RERANK_API).trim()) || '';
             const localStorageApi = localStorage.getItem('ai_rerank_api') || '';
-            const rerankApi = configuredApi || localStorageApi || (isLocalHost ? 'http://127.0.0.1:8001/api/ai/rerank' : '');
+            const rerankApi = configuredApi || localStorageApi || 'https://contesttrace-production.up.railway.app/api/ai/rerank';
             if (!rerankApi) {
                 return top;
             }
