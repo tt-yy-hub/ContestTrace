@@ -39,6 +39,7 @@
         { name: '“匠影定格：最美劳动瞬间”校园摄影大赛', category: '文体体育类赛事活动', tags: ['文体体育', '艺术设计'], level: '校级', time: '2025年', year: 2025 },
         { name: '旅游与酒店管理学院第二届导游风采大赛', category: '文体体育类赛事活动', tags: ['文体体育', '经管商科'], level: '院级', time: '2025年', year: 2025 },
         { name: '旅游与酒店管理学院2025年烹饪大赛', category: '文体体育类赛事活动', tags: ['文体体育'], level: '院级', time: '2025年', year: 2025 },
+        { name: '2026年“经•舞”校园舞蹈视频大赛', category: '文体体育类赛事活动', tags: ['文体体育', '艺术设计'], level: '校级', time: '2026年', year: 2026 },
         { name: '第二十三届“藏龙杯”健康之星心理知识大赛', category: '心理健康&思政德育类活动', tags: ['心理健康', '思政德育'], level: '校级', time: '2025年', year: 2025 },
         { name: '第九届“十佳心委”评选大赛', category: '心理健康&思政德育类活动', tags: ['心理健康'], level: '校级', time: '2025年', year: 2025 },
         { name: '会计学院第一届心理健康教育微课大赛作品征集', category: '心理健康&思政德育类活动', tags: ['心理健康', '思政德育', '会计学院'], level: '院级', time: '2025年', year: 2025 },
@@ -53,6 +54,7 @@
         { name: '湖北经济学院2025年大学生数学建模校内赛', category: '数学建模、统计调研类专业竞赛', tags: ['数学统计'], level: '校级', time: '2025年', year: 2025 },
         { name: '全国大学生数学竞赛选拔测试', category: '数学建模、统计调研类专业竞赛', tags: ['数学统计'], level: '省级/国家级', time: '2025年', year: 2025 },
         { name: '“正大杯”全国大学生市场调查与分析大赛', category: '数学建模、统计调研类专业竞赛', tags: ['数学统计', '经管商科'], level: '国家级 B类', time: '2025年', year: 2025 },
+        { name: '大学生数据要素素质大赛', category: '数学建模、统计调研类专业竞赛', tags: ['数学统计', '经管商科'], level: '校级/省级', time: '2025年', year: 2025 },
         { name: '湖北省/全国企业竞争模拟大赛校赛', category: '经管商科、企业运营模拟类竞赛', tags: ['经管商科', '创新创业'], level: '省级/国家级', time: '2025年', year: 2025 },
         { name: '中国大学生工程实践与创新能力大赛虚拟仿真赛道企业运营仿真赛项校赛', category: '经管商科、企业运营模拟类竞赛', tags: ['经管商科'], level: '国家级 A类', time: '2025年', year: 2025 },
         { name: '“新青年吴兴杯”全国大学生物流设计大赛校内选拔赛', category: '经管商科、企业运营模拟类竞赛', tags: ['经管商科'], level: '国家级', time: '2025年', year: 2025 },
@@ -62,12 +64,51 @@
         { name: '米兰设计周-中国高校设计学科师生优秀作品展', category: '计算机、软件、数字设计艺术类竞赛', tags: ['艺术设计'], level: 'A类', time: '2025年', year: 2025 },
         { name: '两岸新锐设计竞赛·华灿奖', category: '计算机、软件、数字设计艺术类竞赛', tags: ['艺术设计'], level: 'A类', time: '2025年', year: 2025 },
         { name: '中国好创意暨全国数字艺术设计大赛', category: '计算机、软件、数字设计艺术类竞赛', tags: ['艺术设计'], level: 'A类', time: '2025年', year: 2025 },
+        { name: '全国大学生数字媒体科技作品及创意竞赛', category: '计算机、软件、数字设计艺术类竞赛', tags: ['计算机设计', '数字媒体', 'A目录'], level: 'A类', time: '2025年', year: 2025 },
+        { name: '全国三维数字化创新设计大赛', category: '计算机、软件、数字设计艺术类竞赛', tags: ['计算机设计', '三维数字化', 'A目录'], level: 'A类', time: '2025年', year: 2025 },
+        { name: '全国大学生广告艺术大赛', category: '计算机、软件、数字设计艺术类竞赛', tags: ['艺术设计', 'A目录'], level: 'A类', time: '2025年', year: 2025 },
+        { name: '未来设计师·全国高校数字艺术设计大赛（NCDA）', category: '计算机、软件、数字设计艺术类竞赛', tags: ['艺术设计', 'NCDA', 'A目录'], level: 'A类', time: '2025年', year: 2025 },
         { name: '2026年“挑战杯”大学生创业计划竞赛校级选拔赛', category: '创新创业高水平A+/A类竞赛', tags: ['创新创业', 'A+目录'], level: 'A+', time: '2026年', year: 2026 },
         { name: '第十五届“挑战杯”湖北省大学生课外学术科技作品竞赛', category: '创新创业高水平A+/A类竞赛', tags: ['创新创业', '思政德育', 'A+目录'], level: 'A+', time: '2025年', year: 2025 },
         { name: '中国国际大学生创新大赛（2026）', category: '创新创业高水平A+/A类竞赛', tags: ['创新创业', 'A+目录'], level: 'A+', time: '2026年', year: 2026 },
+        { name: '全国大学生电子商务“三创赛”', category: '创新创业高水平A+/A类竞赛', tags: ['创新创业', 'A目录', '电子商务'], level: 'A类', time: '2025年', year: 2025 },
         { name: '大学生数据要素素质大赛、大学生职业规划大赛', category: '教务管理、竞赛统筹、学业相关通知', tags: ['教务学业'], level: '校级通知', time: '2025年', year: 2025 },
         { name: '各类竞赛指南、奖励申报、免考通知等', category: '教务管理、竞赛统筹、学业相关通知', tags: ['教务学业'], level: '教务通知', time: '2025年', year: 2025 }
     ];
+    const TAG_TAXONOMY = {
+        '文体体育类赛事活动': {
+            aliases: ['文体体育', '文体', '体育', '舞蹈', '摄影', '导游风采', '烹饪'],
+            contests: ['会计学院2025年羽毛球赛', '各学院第二十二届田径运动会预选赛及全校体育运动会', '2025年“青春歌行”五四歌咏比赛', '“匠影定格：最美劳动瞬间”校园摄影大赛', '旅游与酒店管理学院第二届导游风采大赛', '旅游与酒店管理学院2025年烹饪大赛', '2026年“经•舞”校园舞蹈视频大赛']
+        },
+        '心理健康&思政德育类活动': {
+            aliases: ['心理思政', '心理', '思政', '德育', '红色', '团课', '清廉'],
+            contests: ['第二十三届“藏龙杯”健康之星心理知识大赛', '第九届“十佳心委”评选大赛', '会计学院第一届心理健康教育微课大赛', '“传承红色基因，续写青春华章”主题微团课大赛', '会计学院红色文化科普讲解案例大赛', '第二届/第三届“浩然杯”读书演讲大赛', '2025年清廉教育主题系列活动']
+        },
+        '英语外语学科竞赛': {
+            aliases: ['英语外语', '英语', '外语', '口译', '笔译', 'neccs', '21世纪杯', '外研社', '国才杯'],
+            contests: ['全国大学生英语竞赛（NECCS）', '第30-31届中国日报社“21世纪杯”全国英语演讲比赛校园选拔赛', '2025“外研社•国才杯”“理解当代中国”全国大学生外语能力大赛校赛']
+        },
+        '数学建模、统计调研类专业竞赛': {
+            aliases: ['数学统计', '数学', '统计', '建模', '正大杯', '数据要素'],
+            contests: ['全国大学生统计建模大赛', '湖北经济学院2025年大学生数学建模校内赛', '全国大学生数学竞赛选拔测试', '“正大杯”全国大学生市场调查与分析大赛', '大学生数据要素素质大赛']
+        },
+        '经管商科、企业运营模拟类竞赛': {
+            aliases: ['经管商科', '经管', '商科', '企业运营', '竞争模拟', '物流设计'],
+            contests: ['湖北省/全国企业竞争模拟大赛校赛', '中国大学生工程实践与创新能力大赛虚拟仿真赛道企业运营仿真赛项校赛', '“新青年吴兴杯”全国大学生物流设计大赛校内选拔赛']
+        },
+        '计算机、软件、数字设计艺术类竞赛': {
+            aliases: ['计算机设计', '计算机', '软件', '数字艺术', 'ncda', '蓝桥杯', '华灿奖', '米兰设计周'],
+            contests: ['2026年（19届）中国大学生计算机设计大赛校赛', '蓝桥杯全国大学生软件和信息技术专业人才大赛', '米兰设计周-中国高校设计学科师生优秀作品展', '两岸新锐设计竞赛·华灿奖', '中国好创意暨全国数字艺术设计大赛', '全国大学生数字媒体科技作品及创意竞赛', '全国三维数字化创新设计大赛', '全国大学生广告艺术大赛', '未来设计师·全国高校数字艺术设计大赛（NCDA）']
+        },
+        '创新创业高水平A+/A类竞赛': {
+            aliases: ['创新创业', '挑战杯', 'a+', 'a类', '创业计划'],
+            contests: ['2026年“挑战杯”大学生创业计划竞赛校级选拔赛', '第十五届“挑战杯”湖北省大学生课外学术科技作品竞赛', '中国国际大学生创新大赛（2026）', '全国大学生电子商务“三创赛”']
+        },
+        'A/A+官方权威学科竞赛目录': {
+            aliases: ['a/a+', 'a+目录', 'a类目录', '官方目录'],
+            contests: ['中国国际大学生创新大赛（2026）', '2026年“挑战杯”大学生创业计划竞赛校级选拔赛', '全国大学生数字媒体科技作品及创意竞赛', '全国三维数字化创新设计大赛', '全国大学生广告艺术大赛', '两岸新锐设计竞赛·华灿奖', '2026年（19届）中国大学生计算机设计大赛校赛', '中国好创意暨全国数字艺术设计大赛', '未来设计师·全国高校数字艺术设计大赛（NCDA）', '米兰设计周-中国高校设计学科师生优秀作品展', '蓝桥杯全国大学生软件和信息技术专业人才大赛', '全国大学生电子商务“三创赛”']
+        }
+    };
     const REASON_BANNED_PATTERNS = [
         /和你最近点击的兴趣方向比较一致/g,
         /和你最近点击的兴趣方向比较匹配/g,
@@ -520,6 +561,7 @@
         return contests.map(function(rawContest) {
             const contest = classifyContest(rawContest);
             const text = [contest.title, contest.summary, contest.content, contest.tags.join(' '), contest.keywords.join(' ')].join(' ').toLowerCase();
+            const normalizedText = normalizeText(text);
 
             let staticScore = 0;
             queryTokens.forEach(function(token) {
@@ -530,6 +572,18 @@
             if (profile.college && text.includes(profile.college.toLowerCase())) staticScore += 8;
             if (profile.major && text.includes(profile.major.toLowerCase())) staticScore += 8;
             if (profile.staticInterests.some(function(interest) { return text.includes(String(interest).toLowerCase()); })) staticScore += 10;
+            const taxonomy = TAG_TAXONOMY[contest.categoryName] || null;
+            if (taxonomy) {
+                const aliasBoost = (taxonomy.aliases || []).filter(function(alias) {
+                    const n = normalizeText(alias);
+                    return n && normalizedText.includes(n);
+                }).length;
+                const contestBoost = (taxonomy.contests || []).some(function(name) {
+                    const n = normalizeText(name);
+                    return n && (normalizedText.includes(n) || normalizeText(contest.title).includes(n));
+                }) ? 1 : 0;
+                staticScore += aliasBoost * 2 + contestBoost * 8;
+            }
 
             // 画像打分：专业/学院/经验/目标奖项（四要素全部参与）
             if (profile.college) {
@@ -902,6 +956,21 @@
         const text = String(rawText || '').trim();
         if (!text) return '';
         const normalized = normalizeText(text);
+        const taxonomyCategory = Object.keys(TAG_TAXONOMY).find(function(name) {
+            const entry = TAG_TAXONOMY[name] || {};
+            const aliases = Array.isArray(entry.aliases) ? entry.aliases : [];
+            const contests = Array.isArray(entry.contests) ? entry.contests : [];
+            const aliasHit = aliases.some(function(alias) {
+                const n = normalizeText(alias);
+                return n && (normalized.includes(n) || n.includes(normalized));
+            });
+            if (aliasHit) return true;
+            return contests.some(function(contestName) {
+                const n = normalizeText(contestName);
+                return n && (normalized.includes(n) || n.includes(normalized));
+            });
+        });
+        if (taxonomyCategory) return taxonomyCategory;
         const candidate = CATEGORY_RULES.find(function(rule) {
             const ruleName = normalizeText(rule.name);
             if (normalized === ruleName || normalized.includes(ruleName) || ruleName.includes(normalized)) {
@@ -1328,6 +1397,16 @@
             let score = 40;
             const sameCategory = selectedCategory && item.category === selectedCategory;
             if (sameCategory) score += 45;
+            const taxonomy = TAG_TAXONOMY[item.category] || null;
+            if (taxonomy) {
+                const isTaxonomyContest = (taxonomy.contests || []).some(function(name) {
+                    const n = normalizeText(name);
+                    const iname = normalizeText(item.name);
+                    return n && (iname === n || iname.includes(n) || n.includes(iname));
+                });
+                if (isTaxonomyContest) score += 12;
+                if (selectedCategory && selectedCategory === item.category) score += 6;
+            }
             if (profile.college && (item.tags.includes(profile.college) || item.name.includes(profile.college))) score += 20;
             if (profile.major && (item.name.includes(profile.major) || item.tags.join(' ').includes(profile.major))) score += 10;
             const preferredCategories = getPreferredCategoriesByProfile(profile);
@@ -1631,6 +1710,65 @@
         return mergeByName(effective.slice(0, 3), selectedSafe).slice(0, 3);
     }
 
+    function getRawContestSnapshot() {
+        if (typeof loadAllContests !== 'function') return [];
+        const all = loadAllContests();
+        return Array.isArray(all) ? all : [];
+    }
+
+    function getCategoryHintWords(categoryName) {
+        const map = {
+            '英语外语学科竞赛': ['英语', '外语', '演讲', '翻译', '口译', '笔译', '听力', '外研社', '国才杯', '21世纪杯', 'neccs'],
+            '数学建模、统计调研类专业竞赛': ['数学', '建模', '统计', '调研', '正大杯'],
+            '经管商科、企业运营模拟类竞赛': ['经管', '商科', '企业', '运营', '物流', '模拟'],
+            '计算机、软件、数字设计艺术类竞赛': ['计算机', '软件', '信息技术', '蓝桥杯', '设计', '数字艺术'],
+            '创新创业高水平A+/A类竞赛': ['创新', '创业', '挑战杯', '创新大赛'],
+            '心理健康&思政德育类活动': ['心理', '思政', '德育', '团课', '红色'],
+            '文体体育类赛事活动': ['文体', '体育', '运动会', '羽毛球', '田径', '歌咏', '摄影']
+        };
+        return map[categoryName] || [];
+    }
+
+    function resolveRawContestForSaiXing(item) {
+        if (!item || !item.name) return null;
+        const all = getRawContestSnapshot();
+        if (!all.length) return null;
+        const targetName = String(item.name || '').trim();
+        if (!targetName) return null;
+
+        const exact = all.find(function(c) {
+            return String(c.title || '').trim() === targetName;
+        });
+        if (exact) return exact;
+
+        const nameTokens = targetName
+            .split(/[“”"'‘’【】\[\]（）()、，,。.!！?？\s\-_:：]+/)
+            .map(function(x) { return x.trim(); })
+            .filter(function(x) { return x.length >= 2; });
+        const hintWords = getCategoryHintWords(item.category);
+        const ranked = all.map(function(c) {
+            const title = String(c.title || '');
+            const content = String(c.content || '');
+            const compName = String(c.competition_name || '');
+            const joined = (title + ' ' + content + ' ' + compName).toLowerCase();
+            let bonus = 0;
+            nameTokens.forEach(function(tk) {
+                if (tk && title.includes(tk)) bonus += 5;
+            });
+            hintWords.forEach(function(w) {
+                if (joined.includes(String(w).toLowerCase())) bonus += 3;
+            });
+            return {
+                contest: c,
+                score: calcTitleSimilarity(targetName, title) + bonus
+            };
+        }).sort(function(a, b) { return b.score - a.score; });
+        if (ranked[0] && ranked[0].score >= 30) {
+            return ranked[0].contest;
+        }
+        return null;
+    }
+
     function buildSaiXingHtml(result, profile) {
         if (!result || !result.items || result.items.length === 0) return '';
         let html = '';
@@ -1639,37 +1777,44 @@
             return makeSaiXingReason(row.item, profile, idx, row.majorMatchLevel || 'unknown');
         });
         const diversifiedReasons = diversifyReasons(reasonList);
+        let renderedCount = 0;
         result.items.forEach(function(row, idx) {
             const item = row.item;
+            const rawContest = resolveRawContestForSaiXing(item);
+            if (!rawContest) return;
             const detailId = 'saixing-' + idx + '-' + Date.now() + '-' + Math.random().toString(16).slice(2, 6);
             const refId = 'ref-saixing-' + idx + '-' + Date.now() + '-' + Math.random().toString(16).slice(2, 6);
+            const displayTitle = rawContest.title || item.name || '未命名竞赛';
+            const displayLevel = rawContest.competition_level || item.level || '普通';
+            const displayTime = rawContest.deadline || item.time || rawContest.publish_time || '以官方通知为准';
+            const displaySource = rawContest.source || '以官方通知为准';
             contestDetailMap[detailId] = {
-                name: item.name || '未命名竞赛',
-                level: item.level || '普通',
-                time: item.time || '以官方通知为准',
-                intro: getContestFeature(item),
+                name: displayTitle,
+                level: displayLevel,
+                time: displayTime,
+                intro: rawContest.summary || rawContest.content || getContestFeature(item),
                 prepAdvice: getValueHint(item, profile),
-                source: 'AI 赛行知识库',
-                publishTime: item.year ? (String(item.year) + '-01-01') : '-',
-                deadline: item.time || '-',
-                organizer: '以官方通知为准',
-                participants: '以官方通知中的参赛对象要求为准',
-                prize: item.level || '待补充',
-                contact: '见原文通知',
-                url: '#',
-                content: getContestFeature(item) + '。' + getValueHint(item, profile),
+                source: displaySource,
+                publishTime: rawContest.publish_time || '-',
+                deadline: rawContest.deadline || displayTime || '-',
+                organizer: rawContest.organizer || displaySource || '未知',
+                participants: rawContest.participants || '以官方通知中的参赛对象要求为准',
+                prize: rawContest.prize || displayLevel || '待补充',
+                contact: rawContest.contact || displaySource || '见原文通知',
+                url: rawContest.url || '#',
+                content: rawContest.content || rawContest.summary || (getContestFeature(item) + '。' + getValueHint(item, profile)),
                 modalContest: {
-                    id: detailId,
-                    title: item.name || '未命名竞赛',
-                    source: 'AI 赛行知识库',
-                    publish_time: item.year ? (String(item.year) + '-01-01') : '',
-                    deadline: item.time || '',
-                    organizer: '以官方通知为准',
-                    participants: '以官方通知中的参赛对象要求为准',
-                    prize: item.level || '未知',
-                    contact: '见原文通知',
-                    content: getContestFeature(item) + '。' + getValueHint(item, profile),
-                    url: '#'
+                    id: rawContest.id || detailId,
+                    title: displayTitle,
+                    source: displaySource,
+                    publish_time: rawContest.publish_time || '',
+                    deadline: rawContest.deadline || '',
+                    organizer: rawContest.organizer || displaySource || '未知',
+                    participants: rawContest.participants || '以官方通知中的参赛对象要求为准',
+                    prize: rawContest.prize || displayLevel || '未知',
+                    contact: rawContest.contact || displaySource || '未知',
+                    content: rawContest.content || rawContest.summary || '无详细内容',
+                    url: rawContest.url || '#'
                 }
             };
             const refPayload = {
@@ -1680,13 +1825,17 @@
             };
             contestRefMap[refId] = refPayload;
             currentAssistantContestRefs.push(refPayload);
+            renderedCount += 1;
             html += '<div class="contest-item ai-contest-clickable" data-detail-id="' + escapeHtml(detailId) + '" data-contest-ref-id="' + escapeHtml(refId) + '">';
-            html += '<div class="contest-name"><strong>' + (idx + 1) + '. ' + escapeHtml(item.name) + '</strong> [' + escapeHtml(item.level) + '] [' + escapeHtml(item.time) + ']</div>';
+            html += '<div class="contest-name"><strong>' + (renderedCount) + '. ' + escapeHtml(displayTitle) + '</strong> [' + escapeHtml(displayLevel) + '] [' + escapeHtml(displayTime) + ']</div>';
             html += '<div class="contest-reason"><strong>匹配度</strong>：' + buildMatchStars(row.score) + '</div>';
             html += '<div class="contest-reason"><strong>为什么推荐</strong>：' + escapeHtml(diversifiedReasons[idx]) + '</div>';
             html += '<div class="contest-reason"><strong>关键提醒</strong>：以学校官方通知为准，建议提前确认报名时间与材料要求。</div>';
             html += '</div>';
         });
+        if (renderedCount === 0) {
+            return '<p>当前兴趣推荐暂未匹配到站内原始竞赛数据，请换一个关键词（如赛事名/学院名）后重试。</p>';
+        }
         if (profile.major || profile.college || profile.weeklyHours || profile.experience) {
             html += '<p><strong>📌 个性化备赛建议</strong><br/>针对你当前画像，优先从前两项中选择 1 项集中准备，先做校内选拔材料，再逐步冲击更高等级赛事。</p>';
         }
@@ -1942,70 +2091,10 @@
         ensureFloatButtonVisible();
     }
 
-    function getDetailDialogElements() {
-        let mask = document.getElementById('ai-contest-detail-mask');
-        if (mask) {
-            return {
-                mask: mask,
-                body: mask.querySelector('.ai-contest-detail-dialog')
-            };
-        }
-        mask = document.createElement('div');
-        mask.id = 'ai-contest-detail-mask';
-        mask.className = 'ai-contest-detail-mask';
-        mask.innerHTML = [
-            '<div class="ai-contest-detail-dialog" role="dialog" aria-modal="true">',
-            '  <button type="button" class="ai-contest-detail-close" aria-label="关闭"><i class="fas fa-times"></i></button>',
-            '  <div class="ai-contest-detail-body"></div>',
-            '</div>'
-        ].join('');
-        document.body.appendChild(mask);
-        const dialog = mask.querySelector('.ai-contest-detail-dialog');
-        mask.addEventListener('click', function(e) {
-            if (e.target === mask) {
-                mask.classList.remove('active');
-            }
-        });
-        mask.querySelector('.ai-contest-detail-close').addEventListener('click', function() {
-            mask.classList.remove('active');
-        });
-        dialog.addEventListener('click', function(e) {
-            e.stopPropagation();
-        });
-        return {
-            mask: mask,
-            body: mask.querySelector('.ai-contest-detail-body')
-        };
-    }
-
     function safeText(text) {
         const raw = String(text == null ? '' : text).trim();
-        if (!raw || raw.toLowerCase() === 'null' || raw.toLowerCase() === 'undefined') return '-';
+        if (!raw || raw.toLowerCase() === 'null' || raw.toLowerCase() === 'undefined') return '';
         return raw;
-    }
-
-    function openContestDetail(detail) {
-        if (!detail) return;
-        const els = getDetailDialogElements();
-        const link = (detail.url && detail.url !== '#')
-            ? '<a href="' + escapeHtml(detail.url) + '" target="_blank" rel="noopener noreferrer" class="ai-contest-original-link"><i class="fas fa-external-link-alt"></i> 查看原文</a>'
-            : '<span class="ai-contest-original-link disabled">暂无原文链接</span>';
-        els.body.innerHTML = [
-            '<h3 class="ai-contest-detail-title">' + escapeHtml(detail.name || '未命名竞赛') + '</h3>',
-            '<div class="ai-contest-detail-grid">',
-            '  <div class="ai-contest-detail-row"><div class="ai-contest-detail-key">来源：</div><div class="ai-contest-detail-val">' + escapeHtml(safeText(detail.source)) + '</div></div>',
-            '  <div class="ai-contest-detail-row"><div class="ai-contest-detail-key">发布时间：</div><div class="ai-contest-detail-val">' + escapeHtml(safeText(detail.publishTime)) + '</div></div>',
-            '  <div class="ai-contest-detail-row"><div class="ai-contest-detail-key">截止时间：</div><div class="ai-contest-detail-val">' + escapeHtml(safeText(detail.deadline || detail.time)) + '</div></div>',
-            '  <div class="ai-contest-detail-row"><div class="ai-contest-detail-key">组织者：</div><div class="ai-contest-detail-val">' + escapeHtml(safeText(detail.organizer)) + '</div></div>',
-            '  <div class="ai-contest-detail-row"><div class="ai-contest-detail-key">参赛对象：</div><div class="ai-contest-detail-val">' + escapeHtml(safeText(detail.participants)) + '</div></div>',
-            '  <div class="ai-contest-detail-row"><div class="ai-contest-detail-key">奖项设置：</div><div class="ai-contest-detail-val">' + escapeHtml(safeText(detail.prize || detail.level)) + '</div></div>',
-            '  <div class="ai-contest-detail-row"><div class="ai-contest-detail-key">联系方式：</div><div class="ai-contest-detail-val">' + escapeHtml(safeText(detail.contact)) + '</div></div>',
-            '  <div class="ai-contest-detail-row"><div class="ai-contest-detail-key">原文链接：</div><div class="ai-contest-detail-val ai-contest-detail-link-wrap">' + link + '<span class="ai-contest-link-tip">以上内容仅供参考，详情请查看原文</span></div></div>',
-            '</div>',
-            '<div class="ai-contest-detail-content">' + escapeHtml(safeText(detail.content || detail.intro)) + '</div>',
-            '<div class="ai-contest-detail-advise"><strong>备赛建议：</strong>' + escapeHtml(safeText(detail.prepAdvice)) + '</div>'
-        ].join('');
-        els.mask.classList.add('active');
     }
 
     function normalizeLooseText(text) {
@@ -2050,45 +2139,34 @@
 
     function toModalContest(detail) {
         if (!detail) return null;
-        // 优先尝试从全量竞赛中匹配真实对象，确保打开的是主站统一模态框（图二）
-        if (typeof loadAllContests === 'function') {
-            const all = loadAllContests() || [];
-            const directId = detail.modalContest && detail.modalContest.id ? String(detail.modalContest.id) : '';
-            const name = String(detail.name || '').trim();
-            const matched = all.find(function(c) {
-                if (directId && String(c.id) === directId) return true;
-                if (name && String(c.title || '').trim() === name) return true;
-                return false;
-            });
-            if (matched) return matched;
+        if (typeof loadAllContests !== 'function') return null;
+        const all = loadAllContests() || [];
+        if (!all.length) return null;
 
-            // 精确匹配失败时，做模糊匹配，尽量找到真实通知
-            if (name && all.length) {
-                const ranked = all.map(function(c) {
-                    return {
-                        contest: c,
-                        score: calcTitleSimilarity(name, c.title || '')
-                    };
-                }).sort(function(a, b) { return b.score - a.score; });
-                if (ranked[0] && ranked[0].score >= 35) {
-                    return ranked[0].contest;
-                }
-            }
+        const directId = detail.modalContest && detail.modalContest.id ? String(detail.modalContest.id) : '';
+        const name = String(detail.name || '').trim();
+        const modalTitle = detail.modalContest ? String(detail.modalContest.title || '').trim() : '';
+        const exact = all.find(function(c) {
+            if (directId && String(c.id) === directId) return true;
+            const title = String(c.title || '').trim();
+            if (name && title === name) return true;
+            if (modalTitle && title === modalTitle) return true;
+            return false;
+        });
+        if (exact) return exact;
+
+        const targetName = name || modalTitle;
+        if (!targetName) return null;
+        const ranked = all.map(function(c) {
+            return {
+                contest: c,
+                score: calcTitleSimilarity(targetName, c.title || '')
+            };
+        }).sort(function(a, b) { return b.score - a.score; });
+        if (ranked[0] && ranked[0].score >= 45) {
+            return ranked[0].contest;
         }
-        // 无法匹配时，使用助手内映射字段兜底
-        return detail.modalContest || {
-            id: String(detail.id || Date.now()),
-            title: detail.name || '未命名竞赛',
-            source: detail.source || '以官方通知为准',
-            publish_time: detail.publishTime || '',
-            deadline: detail.deadline || detail.time || '',
-            organizer: detail.organizer || detail.source || '未知',
-            participants: detail.participants || '以官方通知中的参赛对象要求为准',
-            prize: detail.prize || detail.level || '未知',
-            contact: detail.contact || '见原文通知',
-            content: detail.content || detail.intro || '无详细内容',
-            url: detail.url || '#'
-        };
+        return null;
     }
 
     function extractContestNameFromCard(card) {
@@ -2189,16 +2267,19 @@
             detail = buildDetailFromCardFallback(card);
         }
         if (!detail) return;
-        if (typeof window.openContestModal === 'function') {
-            const modalContest = toModalContest(detail);
+        const modalContest = toModalContest(detail);
+        if (typeof window.openContestModal === 'function' && modalContest) {
             window.openContestModal(modalContest);
-            const modalEl = document.getElementById('contest-modal');
-            if (modalEl) {
-                modalEl.style.zIndex = '10050';
-            }
+        } else if (typeof window.openContestModalById === 'function' && modalContest && modalContest.id) {
+            window.openContestModalById(modalContest.id);
+        } else {
+            addMessage('<p>该推荐项暂未匹配到站内原始竞赛数据，已跳过打开详情。请换一个关键词重试，或点击列表中的同名竞赛卡片查看完整信息。</p>', 'assistant');
             return;
         }
-        openContestDetail(detail);
+        const modalEl = document.getElementById('contest-modal');
+        if (modalEl) {
+            modalEl.style.zIndex = '10050';
+        }
     });
 
     // 对外开放，便于其他页面模块主动调用 AI 助手
