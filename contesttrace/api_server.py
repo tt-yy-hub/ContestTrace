@@ -129,8 +129,8 @@ def normalize_candidates(candidates: List[Dict]) -> List[Dict]:
 
 def rerank_by_llm(query: str, candidates: List[Dict]) -> List[str]:
     api_key = os.getenv("OPENAI_API_KEY", "").strip()
-    # 若未配置，默认使用规则重排，避免本地Ollama依赖
-    base_url = os.getenv("OPENAI_BASE_URL", "").strip().rstrip("/")
+    # 若未配置，默认直连本地 Ollama OpenAI 兼容接口，便于开箱即用
+    base_url = os.getenv("OPENAI_BASE_URL", "http://127.0.0.1:11434/v1").strip().rstrip("/")
     model = os.getenv("OPENAI_MODEL", "qwen2.5:1.5b").strip()
     timeout_s = int(os.getenv("OPENAI_TIMEOUT", "30") or "30")
 
@@ -271,6 +271,6 @@ def split_tokens(text: str) -> List[str]:
 
 if __name__ == "__main__":
     host = os.getenv("AI_API_HOST", "0.0.0.0")
-    port = int(os.getenv("AI_API_PORT", "8001") or "8001")
+    port = int(os.getenv("PORT", os.getenv("AI_API_PORT", "8001")) or "8001")
     app.run(host=host, port=port, debug=False)
 

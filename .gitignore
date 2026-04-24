@@ -224,3 +224,6 @@ exports/
 # 4. 本地运行可能生成的临时文件
 *.tmp
 *.temp
+
+# 5. IDE配置目录
+.qoder/
