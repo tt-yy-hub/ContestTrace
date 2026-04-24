@@ -329,10 +329,7 @@ function initNavbarLoginStatus() {
         // 创建新的认证容器
         const authContainer = document.createElement('div');
         authContainer.id = 'auth-container';
-        authContainer.style.display = 'flex';
-        authContainer.style.alignItems = 'center';
-        authContainer.style.marginLeft = 'auto';
-        
+
         if (isLoggedIn && userInfo) {
             // 已登录状态
             authContainer.innerHTML = `
@@ -341,7 +338,7 @@ function initNavbarLoginStatus() {
                     <i class="fas fa-sign-out-alt"></i> 退出
                 </button>
             `;
-            
+
             // 添加登出事件
             setTimeout(() => {
                 const logoutButton = document.getElementById('logout-button');
@@ -365,8 +362,13 @@ function initNavbarLoginStatus() {
                 }
             }, 0);
         }
-        
-        // 添加到导航栏
-        nav.appendChild(authContainer);
+
+        // 插入到铃铛容器右侧（在同一 flex 行上）
+        const bellContainer = nav.querySelector('.reminder-bell-container');
+        if (bellContainer) {
+            bellContainer.insertAdjacentElement('afterend', authContainer);
+        } else {
+            nav.appendChild(authContainer);
+        }
     }
 }

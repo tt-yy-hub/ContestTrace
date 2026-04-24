@@ -52,6 +52,82 @@ pip install -r requirements.txt
 3. **筛选数据**：筛选出竞赛相关的通知
 4. **启动前端**：启动前端服务器，访问竞赛信息
 
+### 接入本地大模型（AI 小助手重排）
+
+项目已支持 OpenAI 兼容接口（可对接本地 Ollama）。
+
+1. 复制 `.env.example` 为 `.env`，并确认：
+
+```bash
+OPENAI_API_KEY=ollama
+OPENAI_BASE_URL=http://127.0.0.1:11434/v1
+OPENAI_MODEL=qwen2.5:1.5b
+AI_API_HOST=127.0.0.1
+AI_API_PORT=8001
+```
+
+2. 启动 AI 重排后端：
+
+```bash
+python contesttrace/api_server.py
+```
+
+3. 启动前端：
+
+```bash
+cd contesttrace/frontend
+python -m http.server 8000
+```
+
+4. 验证：
+   - 健康检查：`http://127.0.0.1:8001/health`
+   - 前端页面：`http://127.0.0.1:8000`
+   - AI 助手默认调用：`http://127.0.0.1:8001/api/ai/rerank`
+
+说明：模型不可用时，会自动降级到规则重排，保证推荐稳定可用。
+
+### 让 GitHub Pages 也能调用大模型（公网 API）
+
+如果前端部署在 GitHub Pages（例如 [ContestTrace](https://tt-yy-hub.github.io/ContestTrace/)），本地 `127.0.0.1` 模型接口无法被网页直接访问。需要把后端 API 部署到公网。
+
+#### 1) 部署后端到 Render（推荐）
+
+本仓库已提供：
+
+- `render.yaml`
+- `Procfile`
+- `gunicorn` 依赖
+
+在 Render 新建 Web Service，连接本仓库后可直接识别配置。需要设置环境变量：
+
+- `OPENAI_API_KEY`
+- `OPENAI_BASE_URL`（你的大模型 OpenAI 兼容地址）
+- `OPENAI_MODEL`（例如 `qwen2.5:1.5b`）
+
+部署成功后会得到公网地址，例如：
+
+`https://contesttrace-ai-rerank.onrender.com`
+
+健康检查：
+
+`https://contesttrace-ai-rerank.onrender.com/health`
+
+#### 2) 前端配置公网 API
+
+编辑 `contesttrace/frontend/js/runtime-config.js`：
+
+```js
+var PUBLIC_API_BASE = "https://contesttrace-ai-rerank.onrender.com";
+```
+
+前端会自动拼接为：
+
+`https://contesttrace-ai-rerank.onrender.com/api/ai/rerank`
+
+#### 3) 发布前端到 GitHub Pages
+
+将修改推送到 GitHub 对应分支后，GitHub Pages 页面即可调用公网大模型重排接口。
+
 ### 一键运行
 
 运行 `run.bat` 文件，选择相应的操作：
