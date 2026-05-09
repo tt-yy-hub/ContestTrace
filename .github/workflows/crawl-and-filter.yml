@@ -2,10 +2,8 @@ name: Daily Crawl and Filter
 
 on:
   schedule:
-    # 每天运行一次，时间设置为 UTC 时间，对应北京时间 8:00
     - cron: '0 0 * * *'
   workflow_dispatch:
-    # 允许手动触发
 
 jobs:
   crawl-and-filter:
@@ -26,15 +24,15 @@ jobs:
 
       - name: Run crawl and filter
         run: |
-          python run_teammate_spiders.py
-          python create_raw_db.py
-          python filter_raw_to_competition.py
+          python run.py --crawl
           python run.py --export
 
       - name: Commit and push changes
         run: |
           git config --global user.name "tt-yy-hub"
           git config --global user.email "2875533792@qq.com"
+          git checkout main
           git add -f data/ contesttrace/frontend/data/
+          git status
           git commit -m "Update data: Daily crawl and filter" --allow-empty
-          git push
+          git push origin main
