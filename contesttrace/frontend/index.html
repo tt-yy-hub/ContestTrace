@@ -44,6 +44,37 @@
 
         <section class="contest-list">
             <div class="container">
+                <div class="recommend-panel">
+                    <h3><i class="fas fa-robot"></i> AI 个性化推荐</h3>
+                    <p>选择你感兴趣的方向，结合竞赛标题与正文生成个性化推荐。</p>
+                    <div class="recommend-controls">
+                        <label for="interest-select">兴趣方向：</label>
+                        <select id="interest-select" multiple>
+                            <option value="文体体育类赛事活动">文体体育类赛事活动</option>
+                            <option value="心理健康&思政德育类活动">心理健康&思政德育类活动</option>
+                            <option value="英语外语学科竞赛">英语外语学科竞赛</option>
+                            <option value="数学建模、统计调研类专业竞赛">数学建模、统计调研类专业竞赛</option>
+                            <option value="经管商科、企业运营模拟类竞赛">经管商科、企业运营模拟类竞赛</option>
+                            <option value="计算机、软件、数字设计艺术类竞赛">计算机、软件、数字设计艺术类竞赛</option>
+                            <option value="创新创业高水平A+/A类竞赛">创新创业高水平A+/A类竞赛</option>
+                            <option value="A/A+官方权威学科竞赛目录">A/A+官方权威学科竞赛目录</option>
+                            <option value="教务管理、竞赛统筹、学业相关通知">教务管理、竞赛统筹、学业相关通知</option>
+                        </select>
+                        <button id="recommend-button" type="button">
+                            <i class="fas fa-magic"></i> 生成推荐
+                        </button>
+                        <button id="reset-profile-button" type="button">
+                            <i class="fas fa-eraser"></i> 重置画像
+                        </button>
+                    </div>
+                    <div id="recommend-status" class="recommend-status"></div>
+                    <div id="recommend-results" class="recommend-results"></div>
+                    <div class="recommend-history">
+                        <h4><i class="fas fa-history"></i> 推荐历史</h4>
+                        <div id="recommend-history-list"></div>
+                    </div>
+                </div>
+
                 <div class="filter-bar">
                     <div class="filter-group">
                         <label for="source-filter">来源：</label>

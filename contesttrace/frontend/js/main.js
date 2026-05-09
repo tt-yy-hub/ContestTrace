@@ -31,6 +31,7 @@ window.addEventListener('DOMContentLoaded', async function() {
         initSearch();
         initContestList();
         initModal();
+        initAiRecommendations();
         
         // 检查是否有词云搜索关键词
         const cloudKeyword = sessionStorage.getItem('cloud_search_keyword');
@@ -52,6 +53,145 @@ window.addEventListener('DOMContentLoaded', async function() {
         console.error('初始化失败:', error);
     }
 });
+
+function initAiRecommendations() {
+    const btn = document.getElementById('recommend-button');
+    const resetBtn = document.getElementById('reset-profile-button');
+    if (btn) {
+        btn.addEventListener('click', fetchAiRecommendations);
+    }
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            resetBehaviorProfile();
+            saveRecommendHistory([]);
+            renderRecommendHistory();
+            const statusEl = document.getElementById('recommend-status');
+            if (statusEl) {
+                statusEl.textContent = '用户画像已重置。';
+            }
+        });
+    }
+    renderRecommendHistory();
+}
+
+async function fetchAiRecommendations() {
+    const select = document.getElementById('interest-select');
+    const statusEl = document.getElementById('recommend-status');
+    const resultsEl = document.getElementById('recommend-results');
+    if (!select || !statusEl || !resultsEl) return;
+
+    const interests = Array.from(select.selectedOptions).map((o) => o.value);
+    if (!interests.length) {
+        statusEl.textContent = '请至少选择一个兴趣方向。';
+        return;
+    }
+
+    const profile = getBehaviorProfile();
+    profile.last_interests = interests;
+    saveBehaviorProfile(profile);
+
+    statusEl.textContent = '正在调用大模型推荐，请稍候...';
+    resultsEl.innerHTML = '';
+
+    try {
+        const resp = await fetch('http://127.0.0.1:8001/api/recommend', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ interests, user_profile: profile })
+        });
+        const data = await resp.json();
+        if (!resp.ok) throw new Error(data.error || '推荐接口调用失败');
+
+        const recommended = Array.isArray(data.recommended) ? data.recommended : [];
+        statusEl.textContent = `推荐完成（模型：${data.model || '未知'}，召回候选：${data.recall_size || 0}）。${data.reason || ''}`;
+
+        if (!recommended.length) {
+            resultsEl.innerHTML = '<p class="loading">暂无推荐结果，请换一组兴趣再试。</p>';
+            return;
+        }
+
+        const normalized = recommended.map(normalizeContest);
+        normalized.forEach((contest) => {
+            const card = createContestCard(contest);
+            injectRecommendReason(card, contest, interests);
+            resultsEl.appendChild(card);
+        });
+        appendRecommendHistory(interests, normalized, data.reason || '');
+    } catch (error) {
+        statusEl.textContent = `推荐失败：${error.message}。请确认 Ollama 与推荐服务都已启动`;
+    }
+}
+
+function injectRecommendReason(card, contest, interests) {
+    const categories = Array.isArray(contest.ai_match_categories) ? contest.ai_match_categories : [];
+    const keywords = Array.isArray(contest.ai_match_keywords) ? contest.ai_match_keywords : [];
+    const hitCategory = categories.length ? `类别：${categories.join(' / ')}` : '语义相关推荐';
+    const hitKeyword = keywords.length ? `；关键词：${keywords.slice(0, 3).join('、')}` : '';
+    const hint = `${hitCategory}${hitKeyword}`;
+    const chip = document.createElement('div');
+    chip.className = 'ai-reason-chip';
+    chip.textContent = hint;
+    const meta = card.querySelector('.meta');
+    if (meta) {
+        meta.appendChild(chip);
+    } else {
+        card.prepend(chip);
+    }
+}
+
+function appendRecommendHistory(interests, contests, reason) {
+    const history = loadRecommendHistory();
+    history.unshift({
+        at: new Date().toISOString(),
+        interests,
+        reason,
+        titles: contests.slice(0, 3).map((c) => c.title)
+    });
+    saveRecommendHistory(history.slice(0, 20));
+    renderRecommendHistory();
+}
+
+function renderRecommendHistory() {
+    const listEl = document.getElementById('recommend-history-list');
+    if (!listEl) return;
+    const history = loadRecommendHistory();
+    if (!history.length) {
+        listEl.innerHTML = '<div class="history-item">暂无推荐历史</div>';
+        return;
+    }
+    listEl.innerHTML = '';
+    history.forEach((item) => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        const time = (item.at || '').replace('T', ' ').slice(0, 16);
+        div.textContent = `[${time}] 兴趣：${(item.interests || []).join('、')}；推荐：${(item.titles || []).join(' / ')}`;
+        listEl.appendChild(div);
+    });
+}
+
+function normalizeContest(item) {
+    return {
+        id: item.id || item.raw_notice_id || Math.floor(Math.random() * 1000000),
+        title: item.title || '无标题',
+        url: item.url || item.notice_url || '',
+        source: item.source || item.publisher || '未知来源',
+        publish_time: item.publish_time || '',
+        deadline: item.deadline || '',
+        category: item.category || '其他竞赛',
+        organizer: item.organizer || item.source || '未知',
+        participants: item.participants || '全体学生',
+        prize: item.prize || '未知',
+        requirement: item.requirement || '',
+        contact: item.contact || '',
+        content: item.content || '',
+        summary: item.summary || (item.content ? item.content.substring(0, 100) + '...' : '无摘要'),
+        keywords: item.keywords || [],
+        tags: item.tags || '',
+        spider_name: item.spider_name || item.source || '未知',
+        ai_match_categories: item.ai_match_categories || [],
+        ai_match_keywords: item.ai_match_keywords || []
+    };
+}
 
 // 初始化导航
 function initNavigation() {
@@ -424,9 +564,13 @@ function createContestCard(contest) {
         favoriteBtn.addEventListener('click', function(e) {
             e.stopPropagation(); // 阻止事件冒泡，避免触发卡片点击事件
             const contestId = contest.id;
+            const wasFav = isFavorite(contestId);
             toggleFavorite(contestId, contest);
             // 重新获取收藏状态并更新按钮
             const isFav = isFavorite(contestId);
+            if (!wasFav && isFav) {
+                recordPersonalizedFeedback(contest, 'favorite');
+            }
             this.innerHTML = isFav ? '<i class="fas fa-star"></i> 已收藏' : '<i class="far fa-star"></i> 收藏';
         });
     }
@@ -436,6 +580,7 @@ function createContestCard(contest) {
     if (usefulBtn) {
         usefulBtn.addEventListener('click', function(e) {
             e.stopPropagation(); // 阻止事件冒泡，避免触发卡片点击事件
+            recordPersonalizedFeedback(contest, 'useful');
             alert('感谢您的反馈！');
         });
     }
@@ -445,6 +590,7 @@ function createContestCard(contest) {
     if (uselessBtn) {
         uselessBtn.addEventListener('click', function(e) {
             e.stopPropagation(); // 阻止事件冒泡，避免触发卡片点击事件
+            recordPersonalizedFeedback(contest, 'dislike');
             alert('感谢您的反馈，我们会不断改进！');
         });
     }
@@ -648,6 +794,7 @@ function initModal() {
                 const contest = allContests.find(c => c.url === contestUrl);
                 if (contest) {
                     recordContestAction(contest.id, 'favorite');
+                    recordPersonalizedFeedback(contest, 'favorite');
                 }
             }
             
@@ -666,6 +813,7 @@ function initModal() {
             const contest = allContests.find(c => c.title === contestTitle);
             if (contest) {
                 recordContestAction(contest.id, 'useful');
+                recordPersonalizedFeedback(contest, 'useful');
             }
             alert('感谢您的反馈！');
         });
@@ -675,6 +823,12 @@ function initModal() {
     const dislikeBtn = document.getElementById('dislike-btn');
     if (dislikeBtn) {
         dislikeBtn.addEventListener('click', function() {
+            const modalTitle = document.getElementById('modal-title');
+            const title = modalTitle ? modalTitle.textContent : '';
+            const contest = loadAllContests().find(c => c.title === title);
+            if (contest) {
+                recordPersonalizedFeedback(contest, 'dislike');
+            }
             alert('感谢您的反馈，我们会不断改进！');
         });
     }

@@ -446,6 +446,108 @@ body {
     border: 1px solid #f0f0f0;
 }
 
+.recommend-panel {
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1.2rem;
+    border: 1px solid #f0f0f0;
+}
+
+.recommend-panel h3 {
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.recommend-panel p {
+    color: #666;
+    margin-bottom: 1rem;
+}
+
+.recommend-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+}
+
+#interest-select {
+    min-width: 260px;
+    min-height: 90px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 0.5rem;
+    background-color: #fff;
+}
+
+#recommend-button {
+    padding: 0.75rem 1.1rem;
+    border: none;
+    border-radius: 8px;
+    color: #fff;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+}
+
+#reset-profile-button {
+    padding: 0.75rem 1.1rem;
+    border: 1px solid #d9534f;
+    border-radius: 8px;
+    color: #d9534f;
+    cursor: pointer;
+    background: #fff;
+}
+
+.recommend-status {
+    margin-top: 0.8rem;
+    color: #555;
+}
+
+.recommend-results {
+    margin-top: 1rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.ai-reason-chip {
+    margin-top: 0.4rem;
+    display: inline-block;
+    font-size: 0.78rem;
+    color: #2c3e50;
+    background: #eef5ff;
+    border: 1px solid #d8e7ff;
+    border-radius: 999px;
+    padding: 0.2rem 0.65rem;
+}
+
+.recommend-history {
+    margin-top: 1rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid #eef0f2;
+}
+
+.recommend-history h4 {
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+}
+
+#recommend-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.history-item {
+    font-size: 0.9rem;
+    color: #555;
+    background: #fafbfc;
+    border: 1px solid #eef0f2;
+    border-radius: 8px;
+    padding: 0.5rem 0.7rem;
+}
+
 .filter-group {
     display: flex;
     align-items: center;

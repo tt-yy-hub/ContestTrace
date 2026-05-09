@@ -202,6 +202,73 @@ function recordContestAction(contestId, actionType) {
     saveToLocalStorage('contest_action_log', actionLog);
 }
 
+function getBehaviorStorageKey() {
+    const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+    const userId = user && user.id ? String(user.id) : 'guest';
+    return `contest_behavior_profile_${userId}`;
+}
+
+function getBehaviorProfile() {
+    return getFromLocalStorage(getBehaviorStorageKey(), {
+        keyword_weights: {},
+        feedback: [],
+        last_interests: []
+    });
+}
+
+function saveBehaviorProfile(profile) {
+    return saveToLocalStorage(getBehaviorStorageKey(), profile);
+}
+
+function recordPersonalizedFeedback(contest, actionType) {
+    if (!contest) return;
+    const profile = getBehaviorProfile();
+    const mergedText = `${contest.title || ''} ${contest.summary || ''} ${contest.content || ''}`;
+    const words = mergedText
+        .split(/[\s,，。；;、:：()（）【】\[\]\r\n\t]+/)
+        .filter(Boolean)
+        .slice(0, 40);
+
+    const delta = actionType === 'dislike' ? -1 : 1;
+    words.forEach((word) => {
+        if (word.length < 2 || word.length > 12) return;
+        const prev = profile.keyword_weights[word] || 0;
+        profile.keyword_weights[word] = prev + delta;
+    });
+
+    profile.feedback.push({
+        contest_id: contest.id,
+        action: actionType,
+        title: contest.title || '',
+        at: new Date().toISOString()
+    });
+    profile.feedback = profile.feedback.slice(-80);
+    saveBehaviorProfile(profile);
+}
+
+function resetBehaviorProfile() {
+    const empty = {
+        keyword_weights: {},
+        feedback: [],
+        last_interests: []
+    };
+    saveBehaviorProfile(empty);
+}
+
+function getRecommendHistoryKey() {
+    const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+    const userId = user && user.id ? String(user.id) : 'guest';
+    return `recommend_history_${userId}`;
+}
+
+function loadRecommendHistory() {
+    return getFromLocalStorage(getRecommendHistoryKey(), []);
+}
+
+function saveRecommendHistory(items) {
+    return saveToLocalStorage(getRecommendHistoryKey(), items);
+}
+
 // 获取热门竞赛
 function getHotContests(limit = 10) {
     // 加载所有竞赛
