@@ -1,200 +1,164 @@
-# ContestTrace——竞赛信息智能采集与自动化平台
+=========================================
+   ContestTrace 部署说明
+=========================================
 
-## 项目简介
+1. 项目简介
+-----------
+ContestTrace是一个专注于聚合和管理高校学科竞赛信息的平台，
+通过爬虫技术自动收集各学院和部门的竞赛通知，经过智能筛选和
+处理后，为用户提供结构化、易访问的竞赛信息。
 
-ContestTrace是一个专注于聚合和管理高校学科竞赛信息的平台，通过爬虫技术自动收集各学院和部门的竞赛通知，经过智能筛选和处理后，为用户提供结构化、易访问的竞赛信息。
 
-## 功能特点
+=========================================
+2. 环境准备
+-----------
+- 操作系统：Windows / Linux / macOS
+- Python版本：3.7及以上
+- 依赖工具：pip、git
 
-- 自动爬虫：定期爬取各学院和部门的通知公告
-- 智能筛选：通过关键词匹配和规则判断，准确识别竞赛相关通知
-- 数据汇总：将分散的原始数据汇总为统一的数据库
-- 前端展示：提供直观的前端界面，方便用户浏览和筛选竞赛信息
-- 数据导出：支持将竞赛数据导出为CSV格式，方便进一步分析
-- AI助手：支持本地大模型重排功能，提供更智能的推荐
 
-## 项目结构
+=========================================
+3. 快速开始（推荐首次运行）
+-----------
+步骤1：安装依赖
+  运行 run.bat（Windows）或 python run.py
+  选择选项 1：Install Dependencies
 
-```
-ContestTrace/
-├── ContestTrace-main/      # 爬虫模块
-│   ├── gongshang/          # 工商管理学院爬虫
-│   ├── jiaowuchu/          # 教务处爬虫
-│   ├── jingmaoxueyuan/     # 经济与贸易学院爬虫
-│   ├── jingrongxueyuan/    # 金融学院爬虫
-│   ├── kuaiji/             # 会计学院爬虫
-│   ├── lvyoujiudian/       # 旅游与酒店管理学院爬虫
-│   ├── shiyanjiaoxue/      # 实验教学中心爬虫
-│   ├── tongshu/            # 统计与数学学院爬虫
-│   ├── waiguoyu/           # 外国语学院爬虫
-│   ├── xiaotuanwei/        # 团委爬虫
-│   ├── xinguan/            # 信息管理学院爬虫
-│   ├── xinwenyuchuanbo/    # 新闻与传播学院爬虫
-│   ├── xinxigongcheng/     # 信息工程学院爬虫
-│   ├── xueshenggongzuochu/ # 学生工作处爬虫
-│   └── yishusheji/         # 艺术学院爬虫
-├── contesttrace/          # 核心代码
-│   ├── core/             # 核心功能模块
-│   │   ├── database/     # 数据库操作
-│   │   ├── exporter/     # 数据导出
-│   │   ├── filter/       # 竞赛筛选逻辑
-│   │   ├── parsers/      # 数据解析
-│   │   ├── recommender/  # 推荐系统
-│   │   ├── storage/      # 数据存储
-│   │   └── utils/        # 工具函数
-│   ├── frontend/         # 前端界面
-│   │   ├── css/          # 样式文件
-│   │   ├── js/           # JavaScript文件
-│   │   ├── data/         # 前端数据
-│   │   └── images/       # 图片资源
-│   └── api_server.py     # AI重排API服务器
-├── config/               # 配置文件
-│   ├── config.yaml       # 主配置文件
-│   ├── model_config.yaml # 模型配置文件
-│   └── sites.yaml        # 网站配置文件
-├── data/                 # 数据存储目录
-├── .github/              # GitHub Actions 配置
-├── .env.example          # 环境变量示例
-├── .gitignore            # Git忽略文件
-├── LICENSE               # 许可证文件
-├── Procfile              # 部署配置
-├── README.md             # 项目说明
-├── render.yaml           # Render部署配置
-├── requirements.txt      # 依赖配置
-├── run.bat               # 主运行脚本
-├── run.py                # Python 主脚本
-└── 其他辅助脚本
-```
+步骤2：运行全流程
+  选择选项 7：Run Full Process
+  自动完成：爬虫→合并→筛选→导出→启动前端
 
-## 快速开始
+步骤3：访问网站
+  浏览器访问：http://localhost:8000
 
-### 环境要求
 
-- Python 3.7+
-- pip
-
-### 安装依赖
-
-```
-pip install -r requirements.txt
-```
-
-### 运行步骤
-
-1. 运行爬虫：爬取各学院和部门的通知
-2. 汇总数据：将分散的原始数据汇总为统一的数据库
-3. 筛选数据：筛选出竞赛相关的通知
-4. 启动前端：启动前端服务器，访问竞赛信息
-
-### 接入本地大模型（AI 小助手重排）
-
-项目已支持 OpenAI 兼容接口（可对接本地 Ollama）。
-
-1. 复制 .env.example 为 .env，并确认：
-
-```
-OPENAI_API_KEY=ollama
-OPENAI_BASE_URL=http://127.0.0.1:11434/v1
-OPENAI_MODEL=qwen2.5:1.5b
-AI_API_HOST=0.0.0.0
-AI_API_PORT=8001
-```
-
-2. 启动 AI 重排后端：
-
-```
-python contesttrace/api_server.py
-```
-
-3. 启动前端：
-
-```
-cd contesttrace/frontend
-python -m http.server 8000
-```
-
-4. 验证：
-   - 健康检查：http://127.0.0.1:8001/health
-   - 前端页面：http://127.0.0.1:8000
-   - AI 助手默认调用：http://127.0.0.1:8001/api/ai/rerank
-
-说明：模型不可用时，会自动降级到规则重排，保证推荐稳定可用。
-
-### 关于网页部署
-
-由于部署后端服务到公网比较复杂，本项目的 GitHub Pages 版本（https://tt-yy-hub.github.io/ContestTrace/）不使用大模型重排功能，而是完全依赖前端规则排序。
-
-本地使用 vs 网页部署：
-- 本地使用：可以通过 Ollama 部署本地大模型，享受更智能的推荐效果
-- 网页部署：使用前端规则排序，推荐效果稍差但无需后端服务
-
-如需在网页版本中使用大模型重排，需要自行部署后端服务并修改前端 API 调用地址。
-
-### 一键运行
-
-运行 run.bat 文件，选择相应的操作：
-
-```
+=========================================
+4. 菜单选项说明
+-----------
 =======================================
-       ContestTrace Menu
+      ContestTrace Menu
 =======================================
 1. Install Dependencies
-2. Run Spiders
+   安装Python依赖包
+
+2. Run Spiders Only
+   只运行爬虫（增量抓取各学院通知）
+
 3. Merge Raw Databases
+   合并原始数据库（汇总各学院数据到 contest_trace_raw.db）
+
 4. Filter Data
-5. Export Data
+   筛选数据（生成竞赛库 competition.db）
+
+5. Export Data to Frontend
+   导出数据到前端（生成 frontend/data/contests.json）
+
 6. Start Frontend Server
-7. Run Full Process (Spiders->Merge->Filter->Frontend)
+   启动前端服务器（访问 http://localhost:8000）
+
+7. Run Full Process (Spiders-Merge-Filter-Export-Frontend)
+   全流程：爬虫→合并→筛选→导出→启动前端
+
+8. Start AI Rerank API Server
+   启动AI重排后端API（端口8001，可选）
+
 0. Exit
+   退出程序
 =======================================
-```
 
-## 核心模块
 
-1. 爬虫模块（ContestTrace-main）
-   负责从各学院和部门的网站爬取通知公告，支持定期更新。每个学院都有独立的爬虫脚本和数据存储。
+=========================================
+5. 分步运行说明
+-----------
+如果需要分步执行，按以下顺序：
 
-2. 筛选模块
-   通过关键词匹配和规则判断，从原始通知中筛选出竞赛相关的信息。
+1 → 2 → 3 → 4 → 5 → 6
 
-3. 存储模块
-   管理数据的存储和检索，包括原始通知和筛选后的竞赛信息。
+  1：安装依赖（如首次运行）
+  2：运行爬虫抓取最新通知
+  3：将各学院数据汇总到原始数据库
+  4：从原始数据中筛选出竞赛相关通知
+  5：导出竞赛数据到前端目录
+  6：启动前端服务器
 
-4. 推荐模块
-   基于用户画像和竞赛属性，为用户推荐个性化的竞赛信息，支持大模型重排。
 
-5. 前端模块
-   提供直观的用户界面，支持竞赛信息的浏览、搜索和筛选。
+=========================================
+6. 重要提示
+-----------
+【前端必须执行过选项 5 或 7 才能看到数据】
 
-## 数据流程
+如果前端页面空白，请确认已执行过导出步骤，
+并检查 frontend/data/contests.json 文件存在且大小不为0。
 
-1. 爬虫采集 → 2. 原始数据存储 → 3. 数据汇总 → 4. 智能筛选 → 5. 竞赛数据存储 → 6. 前端展示
 
-## 配置说明
+=========================================
+7. 关于AI助手（可选功能）
+-----------
+本地使用（需要Ollama）：
+  1. 安装 Ollama
+  2. 下载模型：ollama pull qwen2.5:1.5b
+  3. 选择菜单选项 8 启动AI重排API服务器
+  4. 前端将自动调用本地API进行推荐重排
 
-- config/sites.yaml：配置爬虫目标网站
-- config/config.yaml：主配置文件
-- config/model_config.yaml：模型配置文件
+AI不可用时：
+  当大模型不可用时，系统会自动降级到规则重排，
+  保证推荐功能稳定可用。
 
-## 技术栈
 
-- 后端：Python、SQLite
-- 前端：HTML、CSS、JavaScript
-- 爬虫：Requests、BeautifulSoup
-- 部署：GitHub Actions、Render
+=========================================
+8. 目录结构说明
+-----------
+- ContestTrace-main/    爬虫模块（各学院爬虫脚本，共14个）
+- contesttrace/         核心代码
+  - core/              核心功能模块（database/exporter/filter/recommender/utils）
+  - frontend/          前端界面（css/js/data）
+  - api_server.py      AI重排API服务器
+- config/               配置文件（网站配置、模型配置等）
+- data/                 数据存储目录（SQLite数据库）
+- .github/workflows/    GitHub Actions配置（定时爬虫）
+- run.bat               Windows主运行脚本
+- run.py                Python主脚本
+- requirements.txt      依赖配置
+- .env.example          环境变量示例
 
-## 贡献指南
 
-1. Fork 本仓库
-2. 创建特性分支
-3. 提交更改
-4. 推送到分支
-5. 开启 Pull Request
+=========================================
+9. 常见问题解答
+-----------
+Q: 前端页面空白，没有数据？
+A: 请确保已执行过选项 5（导出数据）或 7（全流程），
+   并确认 frontend/data/contests.json 文件存在且大小不为0。
 
-## 许可证
+Q: 爬虫运行后没有抓到任何通知？
+A: 检查网络连接，确认 config/sites.yaml 中的目标网站可访问；
+   某些网站可能需要配置Cookie（参见 .env.example 中的 SITE_COOKIES_JSON）。
 
-本项目采用 MIT 许可证 - 详情请参阅 LICENSE 文件
+Q: AI助手不工作？
+A: 先执行选项 8 启动API服务器，并确保前端配置了正确的API地址
+   （默认 http://127.0.0.1:8001）；若无大模型，系统会自动降级，不影响主功能。
 
-## 联系方式
+Q: 如何更新竞赛数据？
+A: 运行 run.bat，选择选项 2（运行爬虫）可增量抓取最新通知；
+   或选择选项 7（全流程）重新执行整个数据处理流程。
 
-如有问题或建议，请通过 GitHub Issues 提交。
+
+=========================================
+10. 数据流程
+-----------
+爬虫抓取 → 原始数据库 → 合并汇总 → 筛选竞赛 → 导出前端 → 前端展示
+   (2)          (3)           (4)         (5)          (6)
+
+
+=========================================
+11. 注意事项
+-----------
+- 首次运行建议使用选项7（全流程）
+- 定期运行爬虫（选项2）可更新数据
+- AI功能为可选，不影响主功能
+- 备份重要数据文件
+- 注意保护API密钥等敏感信息
+
+
+=========================================
+
+如有其他问题，请通过 GitHub Issues 提交。
